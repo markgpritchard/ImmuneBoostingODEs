@@ -1,7 +1,18 @@
 name = "ImmuneBoostingODEs"
-authors = ["Mark G Pritchard"]
-[compat]
-julia = "1.9.3"
-DrWatson = "2.12.7"
+authors = ["Mark Pritchard <mark.pritchard@ndm.ox.ac.uk>"]
+version = "0.1.0"
+
 [deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
+FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+
+[compat]
+DrWatson = "2.12.7"
+julia = "1.9.3"
