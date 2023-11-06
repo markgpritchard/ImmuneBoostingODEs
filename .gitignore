@@ -3,12 +3,15 @@
 ################################################################################
 
 # Folders to ignore - files may be too large, too many, etc. NOTE: EDIT IF NEEDED.
-/data/sims
-/data/exp_raw
-/videos
-/plots
-/notebooks
-/_research
+/data/sims/*
+/data/exp_raw/*
+/videos/*
+/plots/*
+/notebooks/*
+/_research/*
+
+# Do not ignore a special file name
+!.placeholder
 
 ################################################################################
 #                                    Julia                                     #

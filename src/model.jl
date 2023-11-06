@@ -3,7 +3,8 @@
 # The ODE model 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# New way of coding sirns! saves approximately 90% of the runtime 
+# New way of coding sirns! saves approximately 90% of the runtime. Tests added to 
+# check that x1 == cos(2π t - ϕ)
 
 """ 
     sirns!(du, u, p, t)
@@ -26,16 +27,6 @@ function sirns!(du, u, p, t)
     β = p.β0 * (1 + p.β1 * x1) # more efficient version than cos(2π(t-ϕ))
     λ = β * I
     _sirns!(du, u, p, t, λ)
-    
-#=    # compartments
-    du[1] = 3 * p.ω * R3 - β * S * I + p.μ * (1 - S)                    # S
-    du[2] = β * S * I - (p.γ + p.μ) * I                                 # I
-    du[3] = p.γ * I + β * I * p.ψ * (R2 + R3) - (3 * p.ω + p.μ) * R1    # R1
-    du[4] = 3 * p.ω * R1 - (3 * p.ω + β * I * p.ψ + p.μ) * R2           # R2
-    du[5] = 3 * p.ω * R2 - (3 * p.ω + β * I * p.ψ + p.μ) * R3           # R3
-    du[6] = -2π * x2                                                    # x1
-    du[7] = 2π * x1                                                     # x2
-    du[8] = β * S * I                                           # cumulative cases =#
 end 
 
 function _sirns!(du, u, p, t, λ)
@@ -70,15 +61,6 @@ function constantlambda_sirns!(du, u, p, t)
     S, I, R1, R2, R3, x1, x2, cc = u 
 
     _sirns!(du, u, p, t, p.λ)
-
-#=    du[1] = 3 * p.ω * R3 - p.λ * S + p.μ * (1 - S)                          # S
-    du[2] = p.λ * S - (p.γ + p.μ) * I                                       # I
-    du[3] = p.γ * p.λ * S * I  * p.ψ * (R2 + R3) - (3 * p.ω + p.μ) * R1     # R1
-    du[4] = 3 * p.ω * R1 - (3 * p.ω + p.λ * p.ψ + p.μ) * R2                 # R2
-    du[5] = 3 * p.ω * R2 - (3 * p.ω + p.λ * p.ψ + p.μ) * R3                 # R3
-    du[6] = -2π * x2                                                        # x1
-    du[7] = 2π * x1                                                         # x2
-    du[8] = p.λ * S                                           # cumulative cases =#
 end 
 
 

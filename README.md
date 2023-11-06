@@ -32,7 +32,7 @@ which auto-activate the project and enable local path handling from DrWatson.
 * `equilibriumvalues.jl` calculates equilibrium values and limit cycles
 * `fouriertransforms.jl` perfoms simulations of long duration and calculates discrete Fourier transforms (included in supplementary figure in manuscript)
 * `npisimulation.jl` runs simulations with a period of reduced transmission representing use of non-pharmaceutical interventions
-* `rsvanalysisjl` plots Scottish respiratory syncytial virus data and simulations with similar characteristics
+* `rsvanalysis.jl` plots Scottish respiratory syncytial virus data and simulations with similar characteristics
 
 ## Data 
 
