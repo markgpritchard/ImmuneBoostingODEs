@@ -1,9 +1,7 @@
 
 using DrWatson
-#using Revise
 @quickactivate :ImmuneBoostingODEs
 using CairoMakie, DataFrames, DifferentialEquations
-#import StatsPlots: plot as spplot # CairoMakie also exports a function called `plot`
 CairoMakie.activate!() # allows figures to be saved as vector files
 
 
