@@ -34,7 +34,6 @@ export
     # analysedata.jl
     fourierhmdata,
     # optimization.jl 
-    #iterativeopt, opt_changetransmission!, opt_loss, opt_prob, opt_restoretransmission!, opt_sirns!, opt_u0,
     iterativeopt, opt_changetransmission!, opt_restoretransmission!, 
     # equilibriumsurface.jl
     labelequilibriumsurface!, plotequilibriumsurface!,
