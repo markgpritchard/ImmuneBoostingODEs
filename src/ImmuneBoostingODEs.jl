@@ -41,4 +41,13 @@ export
     # plotformating.jl 
     formataxis!, labelplots!, setvalue!
 
+# Temporary code, awaiting update to Makie.jl 
+
+import Makie: create_linepoints 
+include("plottingfunction.jl")
+export create_linepoints
+
+# When Makie.jl is updated, Makie does not need to be an explicit dependency of this 
+# project, and the file "plottingfunction.jl" can be deleted
+ 
 end # module ImmuneBoostingODEs 

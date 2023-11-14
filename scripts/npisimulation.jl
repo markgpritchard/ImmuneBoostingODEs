@@ -1,6 +1,5 @@
 
 using DrWatson
-#using Revise
 @quickactivate :ImmuneBoostingODEs
 using CairoMakie, DifferentialEquations
 CairoMakie.activate!() # allows figures to be saved as vector files
