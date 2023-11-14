@@ -142,3 +142,10 @@ function processdata(func, rawfilename, processedfilename)
     end 
     return data
 end
+
+function printrawdate(rawdate::Int)
+    stringdate = "$rawdate"
+    printrawdate(stringdate)
+end 
+
+printrawdate(stringdate::String) = "$(stringdate[7:8])/$(stringdate[5:6])/$(stringdate[1:4])"
