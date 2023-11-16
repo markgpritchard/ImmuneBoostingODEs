@@ -52,9 +52,7 @@ opt_restoretransmission!(integrator) = integrator.p[3] = one(integrator.p[1])
 # Loss function 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-huberloss(a, δ) = a <= δ ? .5 * abs2(a) : δ * (abs(a) - .5 * δ)
-
-function opt_loss(p, prob; casesvector, opt_cbs, saveinds, savetimes, δ = 300, verbose = false)
+function opt_loss(p, prob; casesvector, opt_cbs, saveinds, savetimes, verbose = false)
     saveat = savetimes[saveinds]
     puse = [ p; [ one(p[1]) ] ]
     tmp_prob = remake(prob; p = puse)
@@ -64,7 +62,7 @@ function opt_loss(p, prob; casesvector, opt_cbs, saveinds, savetimes, δ = 300, 
         tmp_vector = Array(tmp_sol)[8, :] 
         tmp_casesvector = casesvector[saveinds]
         loss = mean([ 
-            huberloss(.0025 * 5.5e6 * (tmp_vector[i+1] - tmp_vector[i]) - case, δ) 
+            abs2(.0025 * 5.5e6 * (tmp_vector[i+1] - tmp_vector[i]) - case) 
             for (i, case) ∈ enumerate(tmp_casesvector[2:end])
         ])
     else # differential equations solver has not produced sufficiently long simulation
@@ -74,12 +72,12 @@ function opt_loss(p, prob; casesvector, opt_cbs, saveinds, savetimes, δ = 300, 
     return loss
 end
 
-function opt_prob(sirnsfunction, initialvalues, u0, tspan; casesvector, opt_cbs, savetimes, δ = 300)
+function opt_prob(sirnsfunction, initialvalues, u0, tspan; casesvector, opt_cbs, savetimes)
     saveinds = findall(x -> tspan[1] <= x <= tspan[2], savetimes)
     saveat = savetimes[saveinds]
     p = initialvalues
     prob = ODEProblem(sirnsfunction, u0, tspan, p)
-    _loss(p) = opt_loss(p, prob; casesvector, opt_cbs, saveinds, savetimes, δ)
+    _loss(p) = opt_loss(p, prob; casesvector, opt_cbs, saveinds, savetimes)
     p0 = initialvalues
 
     adtype = Optimization.AutoZygote()
@@ -104,7 +102,7 @@ function iterativeopt(R0, β1, ψ, initialvalues; casesvector, increaseday, opt_
     endday = increaseday + .05 
     _sirns1!(du, u, p, t) = opt_sirns!(du, u, p, t; R0, β1, ψ)
     tspan = ( reduceday, endday )
-    optprob = opt_prob(_sirns1!, p0, u0, tspan; casesvector, opt_cbs, savetimes, δ = 1000)
+    optprob = opt_prob(_sirns1!, p0, u0, tspan; casesvector, opt_cbs, savetimes)
     multipliers = Optimization.solve(optprob, ADAM(); maxiters = 500)
     _sirns2!(du, u, p, t) = opt_sirns!(du, u, p, t; R0, β1, ψ, fixedbeta1 = multipliers[1])
     endday += .2 
