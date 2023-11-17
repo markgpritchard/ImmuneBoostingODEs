@@ -37,3 +37,10 @@ which auto-activate the project and enable local path handling from DrWatson.
 ## Data 
 
 Processed data to reproduce all analysis are provided in `data/exp_pro`. If you prefer to use your own raw data, load the raw data into `exp_raw` and change the filename of the processed data files so they are not called in error.
+
+Data used in this analysis were released by Public Health Scotland under the [Open Government Licence for public sector information](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
+
+## Funding 
+
+This study is funded by the National Institute for Health Research (NIHR) Health Protection Research Unit in Emerging and Zoonotic Infections (200907), a partnership between the United Kingdom Health Security Agency (UKHSA), the University of Liverpool, the University of Oxford and the Liverpool School of Tropical Medicine. The views expressed are those of the authors and not necessarily those of the NIHR, the UKHSA or the Department of Health and Social Care.
+
