@@ -16,7 +16,7 @@ let
 
     for i ∈ 1:5
         color = ( [ COLOUR_S, COLOUR_I, COLOUR_R, COLOUR_R, COLOUR_R ][i], .2 )
-        label = [ "S", "I", "R₁", "R1₂", "R₃" ][i]
+        label = [ "S", "I", "R₁", "R₂", "R₃" ][i]
         # generate coloured boxes for each compartment
         poly!(ax, Rect(i - .25, -.25, .5, .5); color)
         # label each box
