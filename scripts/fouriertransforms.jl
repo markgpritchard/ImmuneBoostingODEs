@@ -191,7 +191,7 @@ end
 # Plots of simulations 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-fourierplot = Figure(resolution = ( 800, 300 ))
+fourierplot = Figure(; size = ( 800, 300 ))
 fourierplot_gb = GridLayout(fourierplot[1, 1])
 
 Label(fourierplot_gb[0, 1], "Immune duration 6 months"; 

@@ -7,7 +7,7 @@ using CairoMakie
 CairoMakie.activate!() # allows figures to be saved as vector files
 
 # Make the plot
-introplot = Figure(; figure_padding = 1, resolution = ( 400, 200 ))
+introplot = Figure(; figure_padding = 1, size = ( 400, 200 ))
 let 
     fontsize = 11.84 # font size for parameter labels on arrows 
 

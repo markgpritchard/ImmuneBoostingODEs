@@ -13,7 +13,7 @@ immunedurationplot = let
     sol = run_sirns(u0, p, ( 0., 2.5 ))
     mc = modelcompartments(sol, p)
 
-    immunedurationplot = Figure(; resolution = ( 400, 350 ))
+    immunedurationplot = Figure(; size = ( 400, 350 ))
     axs = [ Axis(immunedurationplot[i, 1]) for i ∈ 1:2 ]
     lines!(axs[1], mc[:gt], mc[:Rtotal]; color = COLOUR_R)
     # rate of leaving immunity is 3ω * R3

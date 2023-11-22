@@ -152,7 +152,7 @@ end
 
 # Plot the Strigency Index 
 
-stringencyplot = Figure(resolution = ( 400, 400 ))
+stringencyplot = Figure(; size = ( 400, 400 ))
 let 
     ax = Axis(stringencyplot[1, 1])
     vspan!(ax, reduceday, increaseday, color = (:gray, 0.1))
@@ -169,7 +169,7 @@ safesave(plotsdir("stringencyplot.pdf"), stringencyplot)
 
 # Plot simulations 
 
-npisimulationplot = Figure(resolution = ( 800, 500 ))
+npisimulationplot = Figure(; size = ( 800, 500 ))
 
 let 
     @unpack reductiontime = npiparms

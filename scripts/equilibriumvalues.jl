@@ -250,7 +250,7 @@ end
 
 ## Proportions in each compartment at equilibrium 
 
-equilibriumproportionsplot = Figure(; resolution = ( 400, 800 ))
+equilibriumproportionsplot = Figure(; size = ( 400, 800 ))
 let 
     @unpack γ, μ, psis, ω, R0s = equilparms
     betas = R0s .* (γ + μ)
@@ -276,7 +276,7 @@ safesave(plotsdir("equilibriumproportionsplot.pdf"), equilibriumproportionsplot)
 
 ## Threshold values for stable equilibrium 
 
-equilibriumplot = Figure(; resolution = ( 800, 550 ))
+equilibriumplot = Figure(; size = ( 800, 550 ))
 
 let 
     @unpack psis, durations = equilparms
@@ -406,7 +406,7 @@ safesave(plotsdir("equilibriumplot.pdf"), equilibriumplot)
 
 ## Susceptible--infectious planes
 
-siplot = Figure(; resolution = ( 800, 250 ))
+siplot = Figure(; size = ( 800, 250 ))
 let
     ax1 = Axis(siplot[1, 1])
     lines!(ax1, stablesim[:S], stablesim[:I]; color = COLOURVECTOR[4])

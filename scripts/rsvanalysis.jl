@@ -231,7 +231,7 @@ end
 
 ## Plot data with simulations 
 
-rsvfigure = Figure(resolution = ( 400, 600 ))
+rsvfigure = Figure(; size = ( 400, 600 ))
 
 let 
     @unpack reduceday, increaseday = rsvparms
@@ -274,7 +274,7 @@ safesave(plotsdir("rsvfigure.pdf"), rsvfigure)
 
 ## Plot age-stratified data
 
-rsvagefigure = Figure(resolution = ( 400, 600 ))
+rsvagefigure = Figure(; size = ( 400, 600 ))
 
 let 
     colours = [ ( :gray, .4); [ COLOURVECTOR[i] for i ∈ [ 5, 6, 4 ] ] ]
