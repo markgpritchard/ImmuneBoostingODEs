@@ -27,12 +27,13 @@ which auto-activate the project and enable local path handling from DrWatson.
 
 ## Scripts 
 
-* `figure1.jl` creates the model flowchart (Figure 1 in the manuscript)
-* `immuneduration.jl` plots expected immune duration without immune boosting for supplementary figure
+* `immuneduration.jl` calculates expected immune duration without immune boosting for supplementary figure
 * `equilibriumvalues.jl` calculates equilibrium values and limit cycles
 * `fouriertransforms.jl` perfoms simulations of long duration and calculates discrete Fourier transforms (included in supplementary figure in manuscript)
 * `npisimulation.jl` runs simulations with a period of reduced transmission representing use of non-pharmaceutical interventions
-* `rsvanalysis.jl` plots Scottish respiratory syncytial virus data and simulations with similar characteristics
+* `rsvanalysis.jl` calculates Scottish respiratory syncytial virus data and simulations with similar characteristics
+* `figuresformanuscript.jl` produces figures formatted for a manuscript 
+* `figuresforposter.jl` produces figures formatted for a poster
 
 ## Data 
 

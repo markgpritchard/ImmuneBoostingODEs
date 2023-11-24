@@ -16,6 +16,7 @@ include("model.jl")
 include("analysedata.jl")
 include("optimization.jl")
 include("equilibriumsurface.jl")
+include("plotting.jl")
 include("plotformating.jl")
 
 export 
@@ -37,6 +38,10 @@ export
     iterativeopt, opt_changetransmission!, opt_restoretransmission!, 
     # equilibriumsurface.jl
     labelequilibriumsurface!, plotequilibriumsurface!,
+    # plotting.jl
+    modelflowchart!, plotequilibrium!, plotequilibriuma!, plotequilibriumb!, plotequilibriumc!,
+    plotequilibriumproportions!, plotfourier!, plotimmuneduration!, plotnpi!, plotrsvage!, 
+    plotrsvsim!, plotsi!, plotstringency!,
     # plotformating.jl 
     formataxis!, labelplots!, setvalue!
  

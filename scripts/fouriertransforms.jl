@@ -1,8 +1,6 @@
 
 using DrWatson
 @quickactivate :ImmuneBoostingODEs
-using CairoMakie
-CairoMakie.activate!() # allows figures to be saved as vector files
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Parameters used frequently in this script 
@@ -185,68 +183,3 @@ forced25freqs, forced25densities, forced25mins, forced25maxs = let
     end 
     ( freq_overall, densities, mins, maxs )
 end 
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Plots of simulations 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-fourierplot = Figure(; size = ( 800, 300 ))
-fourierplot_gb = GridLayout(fourierplot[1, 1])
-
-Label(fourierplot_gb[0, 1], "Immune duration 6 months"; 
-    fontsize = 11.84, halign = :left, tellwidth = false)
-Label(fourierplot_gb[0, 2], "1.1 years"; fontsize = 11.84, halign = :left, tellwidth = false)
-Label(fourierplot_gb[0, 3], "2.5 years"; fontsize = 11.84, halign = :left, tellwidth = false)
-
-let 
-    @unpack psis = simparms
-    freqvector = [ unforced6mfreqs, unforced400dfreqs, unforced25freqs ]
-    densityvector = [ unforced6mdensities, unforced400ddensities, unforced25densities ]
-
-    axs = [ Axis(fourierplot_gb[1, i]; yscale = log) for i ∈ 1:3 ]
-    i = 1
-    for (ax, freqs, densities) ∈ zip(axs, freqvector, densityvector)
-        inds = findall(x -> .1 <= x <= 365 / 21, freqs) 
-        hm = heatmap!(ax, psis, freqs[inds], log10.(densities[inds, :]'); 
-            colormap = :CMRmap, colorrange = ( -6, 0 ))
-        ax.yticks = ([.2, .5, 1, 2, 4, 365 / 35], [ "5 y", "2 y", "1 y", "6 m", "3 m", "5 w"])
-        formataxis!(ax; hidex = true, hidey = i != 1)
-        if i == 1 
-            co = Colorbar(fourierplot_gb[1:2, 4], hm) 
-            formataxis!(co)
-        end
-        i += 1
-    end
-    Label(fourierplot_gb[1:2, 0], "Period"; 
-        fontsize = 11.84, rotation = π/2, tellheight = false)
-    Label(fourierplot_gb[1:2, 5], "log₁₀ spectral density"; 
-        fontsize = 11.84, rotation = -π/2, tellheight = false)
-end
-
-let 
-    @unpack psis = simparms
-    freqvector = [ forced6mfreqs, forced400dfreqs, forced25freqs ]
-    densityvector = [ forced6mdensities, forced400ddensities, forced25densities ]
-
-    axs = [ Axis(fourierplot_gb[2, i]; yscale = log) for i ∈ 1:3 ]
-    i = 1
-    for (ax, freqs, densities) ∈ zip(axs, freqvector, densityvector)
-        inds = findall(x -> .1 <= x <= 365 / 21, freqs) 
-        hm = heatmap!(ax, psis, freqs[inds], log10.(densities[inds, :]'); 
-            colormap = :CMRmap, colorrange = ( -6, 0 ))
-        ax.yticks = ([.2, .5, 1, 2, 4, 365 / 35], [ "5 y", "2 y", "1 y", "6 m", "3 m", "5 w"])
-        formataxis!(ax; hidey = i != 1)
-        i += 1
-    end
-    Label(fourierplot_gb[3, 1:3], "Boosting coefficient, ψ"; 
-        fontsize = 11.84, tellwidth = false)
-end
-
-labelplots!([ "A", "B"], fourierplot_gb; rows = [ 0, 2])
-
-for r ∈ [ 1, 3 ] rowgap!(fourierplot_gb, r, 5) end
-for c ∈ [ 1, 5 ] colgap!(fourierplot_gb, c, 5) end
-fourierplot
-
-safesave(plotsdir("fourierplot.pdf"), fourierplot)

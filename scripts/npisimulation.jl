@@ -1,8 +1,7 @@
 
 using DrWatson
 @quickactivate :ImmuneBoostingODEs
-using CairoMakie, DifferentialEquations
-CairoMakie.activate!() # allows figures to be saved as vector files
+using DifferentialEquations
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -144,68 +143,3 @@ npisim_phi13_2 = let
     cases = casespertimeblock(compartments[:cc]) * 5_500_000 * θ
     @ntuple compartments cases
 end 
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Plots
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Plot the Strigency Index 
-
-stringencyplot = Figure(; size = ( 400, 400 ))
-let 
-    ax = Axis(stringencyplot[1, 1])
-    vspan!(ax, reduceday, increaseday, color = (:gray, 0.1))
-    lines!(ax, crgtdata.Date, crgtdata.StringencyIndex_Average; color = COLOURVECTOR[1])
-    Label(stringencyplot[2, 1], "Date"; fontsize = 11.84, tellwidth = false)
-    Label(stringencyplot[1, 0], "Stringency index"; 
-        fontsize = 11.84, rotation = π/2, tellheight = false)
-    colgap!(stringencyplot.layout, 1, 5)
-    rowgap!(stringencyplot.layout, 1, 5)
-    formataxis!(ax)
-end
-stringencyplot
-safesave(plotsdir("stringencyplot.pdf"), stringencyplot)
-
-# Plot simulations 
-
-npisimulationplot = Figure(; size = ( 800, 500 ))
-
-let 
-    @unpack reductiontime = npiparms
-
-    ga = GridLayout(npisimulationplot[1, 1])
-    axs = [ Axis(ga[i, j]) for i ∈ [ 1, 3, 5 ], j ∈ [ 1, 3 ] ]
-    for (i, m) ∈ enumerate([ npisim_phi0, npisim_phi5, npisim_phi13_2 ])
-        @unpack cases, compartments = m 
-        lines!(axs[i, 1], compartments[:gt][2:end], cases; color = COLOURVECTOR[3])
-        lines!(axs[i, 2], compartments[:gt], compartments[:S]; color = COLOUR_S, label = "S")
-        lines!(axs[i, 2], compartments[:gt], compartments[:R1]; color = COLOURVECTOR[4], label = "R₁")
-        lines!(axs[i, 2], compartments[:gt], compartments[:R2]; color = COLOURVECTOR[5], label = "R₂")
-        lines!(axs[i, 2], compartments[:gt], compartments[:R3]; color = COLOURVECTOR[6], label = "R₃")
-        for j ∈ 1:2 vspan!(axs[i, j], reductiontime, reductiontime + 1, color = (:gray, 0.1)) end
-   
-    end
-    leg = Legend(ga[0, 3], axs[2, 2])#; padding = ( 5, 5, 3, 3 ))
-
-    linkxaxes!(axs...)
-    for j ∈ 1:2 linkyaxes!(axs[:, j]...) end
-    for i ∈ 1:3, j ∈ 1:2
-        formataxis!(axs[i, j]; hidex = i != 3, hidexticks = i != 3)
-        i != 3 && hidespines!(axs[i, j], :b)
-    end
-    formataxis!(leg)
-
-    Label(ga[0, 1], "R₀ = 1.215 ± 10%, ψ = 0"; fontsize = 11.84, halign = :left, tellwidth = false)
-    Label(ga[2, 1], "R₀ = 1.285 ± 8.2%, ψ = 5"; fontsize = 11.84, halign = :left, tellwidth = false)
-    Label(ga[4, 1], "R₀ = 1.6, ψ = 13.2"; fontsize = 11.84, halign = :left, tellwidth = false)
-
-    Label(ga[6, 1:3], "Time, years"; fontsize = 11.84, tellwidth = false)
-    Label(ga[1:5, 0], "Weekly recorded incidence"; fontsize = 11.84, rotation = π/2, tellheight = false)
-    Label(ga[1:5, 2], "Proportions"; fontsize = 11.84, rotation = π/2, tellheight = false)
-    for r ∈ [ 1, 3, 5, 6 ] rowgap!(ga, r, 5) end
-    for c ∈ [ 1, 3 ] colgap!(ga, c, 5) end
-end 
-npisimulationplot
-
-safesave(plotsdir("npisimulationplot.pdf"), npisimulationplot)

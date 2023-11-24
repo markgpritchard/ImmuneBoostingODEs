@@ -1,9 +1,7 @@
 
 using DrWatson
 @quickactivate :ImmuneBoostingODEs
-using CairoMakie, DataFrames, DifferentialEquations
-CairoMakie.activate!() # allows figures to be saved as vector files
-
+using DataFrames, DifferentialEquations
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Load the data 
@@ -223,98 +221,3 @@ rsvsim_psi13_2 = let
     cases = casespertimeblock(compartments[:cc]) * 5_500_000 * θ
     @ntuple compartments cases
 end 
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Plots
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-## Plot data with simulations 
-
-rsvfigure = Figure(; size = ( 400, 600 ))
-
-let 
-    @unpack reduceday, increaseday = rsvparms
-    ga = GridLayout(rsvfigure[1, 1])
-    ax1 = Axis(ga[1, 1])
-    lines!(ax1, data.Date, data.Cases; color = :black)
-    vspan!(ax1, reduceday, increaseday, color = ( :gray, 0.1 )) 
-
-    axs = [ Axis(ga[i, 1]) for i ∈ [ 3, 5, 7 ] ]
-    for (i, m) ∈ enumerate([ rsvsim_psi0, rsvsim_psi5, rsvsim_psi13_2 ])
-        @unpack cases, compartments = m 
-        scatter!(axs[i], data.Date, data.Cases; color = :black, markersize = 3)
-        lines!(axs[i], compartments[:gt][2:end], cases; color = COLOURVECTOR[3])
-        vspan!(axs[i], reduceday, increaseday, color = ( :gray, 0.1 )) 
-    end
-
-    linkaxes!(ax1, axs...)
-    ax1.xticks = collect(2017:1:2023)
-    formataxis!(ax1; hidex = true, hidexticks = true, hidespines = [ :b, :t, :r ])
-    for i ∈ 1:3
-        axs[i].xticks = collect(2017:1:2023)
-        formataxis!(axs[i]; hidex = i != 3, hidexticks = i != 3)
-        i != 3 && hidespines!(axs[i], :b)
-    end
-
-    Label(ga[0, 1], "Recorded cases in Scotland"; fontsize = 11.84, halign = :left, tellwidth = false)
-    Label(ga[2, 1], "R₀ = 1.215 ± 10%, ψ = 0"; fontsize = 11.84, halign = :left, tellwidth = false)
-    Label(ga[4, 1], "R₀ = 1.285 ± 8.2%, ψ = 5"; fontsize = 11.84, halign = :left, tellwidth = false)
-    Label(ga[6, 1], "R₀ = 1.6, ψ = 13.2"; fontsize = 11.84, halign = :left, tellwidth = false)
-
-    Label(ga[8, 1], "Time, years"; fontsize = 11.84, tellwidth = false)
-    Label(ga[1:7, 0], "Weekly recorded incidence"; fontsize = 11.84, rotation = π/2, tellheight = false)
-    for r ∈ [ 1, 3, 5, 7, 8 ] rowgap!(ga, r, 5) end
-    for c ∈ [ 1 ] colgap!(ga, c, 5) end
-end 
-rsvfigure
-
-safesave(plotsdir("rsvfigure.pdf"), rsvfigure)
-
-
-## Plot age-stratified data
-
-rsvagefigure = Figure(; size = ( 400, 600 ))
-
-let 
-    colours = [ ( :gray, .4); [ COLOURVECTOR[i] for i ∈ [ 5, 6, 4 ] ] ]
-
-    axs = [ Axis(rsvagefigure[i, 1]) for i ∈ 1:7 ]
-    for (i, y) ∈ enumerate(collect(2016:1:2022))
-        d = subset(agedata, :Year => x -> x.== y)
-        for (j, a) ∈ enumerate(unique(agedata.AgeGroup))
-            d2 = subset(d, :AgeGroup => x -> x.== a )
-            if y <= 2019 color = colours[1] else color = colours[i-3] end
-            lines!(axs[j], d2.FractionDate, getproperty(d2, Symbol("Rate$a")); color, label = "$y") 
-            if y == 2022 
-                maxy = maximum(getproperty(d2, Symbol("Rate$a")))
-                text!(axs[j], 0, .9 * maxy; text = "$a", fontsize = 11.84, align = ( :left, :top ))
-            end
-        end
-    end 
-
-    for i ∈ 1:7
-        formataxis!(axs[i]; hidex = i != 7, hidexticks = i != 7) 
-        if i != 7 hidespines!(axs[i], :b) end
-    end
-
-    linkxaxes!(axs...)
-    axs[7].xticks = (
-        [ 0, .25, .5, .75, 1 ], 
-        [ "April", "July", "Oct", "Jan", "April" ]
-    )
-
-    # create legend manually 
-    lineelements = [ LineElement(; color = c) for c ∈ colours ]
-    labels = [ "2016-19", "2020", "2021", "2022" ]
-    leg = Legend(rsvagefigure[0, 1], lineelements, labels, "Year:"; titlefont = :regular)
-    formataxis!(leg)
-
-    Label(rsvagefigure[8, 1], "Month"; fontsize = 11.84, tellwidth = false)
-    Label(rsvagefigure[1:7, 0], "Annual cumulative incidence"; fontsize = 11.84, rotation = π/2, tellheight = false)
-    for r ∈ [ 1, 8 ] rowgap!(rsvagefigure.layout, r, 5) end
-    for c ∈ [ 1 ] colgap!(rsvagefigure.layout, c, 5) end
-end
-rsvagefigure
-
-safesave(plotsdir("rsvagefigure.pdf"), rsvagefigure)
