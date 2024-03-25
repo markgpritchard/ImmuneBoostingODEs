@@ -354,9 +354,18 @@ function plotnpi!(fig, npisim_phi0, npisim_phi5, npisim_phi13_2, npiparms)
     end
     formataxis!(leg)
 
-    Label(ga[0, 1], "R₀ = 1.215 ± 10%, ψ = 0"; fontsize = 11.84, halign = :left, tellwidth = false)
-    Label(ga[2, 1], "R₀ = 1.285 ± 8.2%, ψ = 5"; fontsize = 11.84, halign = :left, tellwidth = false)
-    Label(ga[4, 1], "R₀ = 1.6, ψ = 13.2"; fontsize = 11.84, halign = :left, tellwidth = false)
+    Label(
+        ga[0, 1], "R₀ = 1.215 with seasonal forcing ± 10%, ψ = 0"; 
+        fontsize = 11.84, halign = :left, tellwidth = false
+    )
+    Label(
+        ga[2, 1], "R₀ = 1.285 with seasonal forcing ± 8.2%, ψ = 5"; 
+        fontsize = 11.84, halign = :left, tellwidth = false
+    )
+    Label(
+        ga[4, 1], "R₀ = 1.6 with no seasonal forcing, ψ = 13.2"; 
+        fontsize = 11.84, halign = :left, tellwidth = false
+    )
 
     Label(ga[6, 1:3], "Time, years"; fontsize = 11.84, tellwidth = false)
     Label(ga[1:5, 0], "Weekly incidence"; fontsize = 11.84, rotation = π/2, tellheight = false)
