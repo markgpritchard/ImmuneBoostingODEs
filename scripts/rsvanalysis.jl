@@ -79,10 +79,10 @@ function sirrrs!(du, u, p, t)
     #]
     λ = [ 
         p.τ * (
-            p.c[i, 1] * sum(u[2, 1:5]) / (p.ν + sum(u[1:5, 1:5])) + 
-            p.c[i, 2] * sum(u[2, 6:10]) / sum(u[1:5, 6:10]) + 
-            p.c[i, 3] * sum(u[2, 11:15]) / sum(u[1:5, 11:15]) + 
-            sum([ p.c[i, j] * u[2, (j + 12)] / sum(u[1:5, (j + 12)]) for j ∈ 4:16 ])
+            p.c[i, 1] * sum(@view u[2, 1:5]) / (p.ν + sum(@view u[1:5, 1:5])) + 
+            p.c[i, 2] * sum(@view u[2, 6:10]) / sum(@view u[1:5, 6:10]) + 
+            p.c[i, 3] * sum(@view u[2, 11:15]) / sum(@view u[1:5, 11:15]) + 
+            sum([ p.c[i, j] * u[2, (j + 12)] / sum(@view u[1:5, (j + 12)]) for j ∈ 4:16 ])
         ) * 365.25
         for i ∈ 1:16
     ]
@@ -185,24 +185,24 @@ end
 function _fillputmatrix!(mat, sol, ind::Integer)
     for i ∈ eachindex(sol) 
         mat[i, 1] = sol[i][ind, 1]
-        mat[i, 2] = sum(sol[i][ind, 2:5])
-        mat[i, 3] = sum(sol[i][ind, 6:15])
-        mat[i, 4] = sum(sol[i][ind, 16:21])
-        mat[i, 5] = sum(sol[i][ind, 22:25])
-        mat[i, 6] = sum(sol[i][ind, 26:27])
+        mat[i, 2] = sum(@view sol[i][ind, 2:5])
+        mat[i, 3] = sum(@view sol[i][ind, 6:15])
+        mat[i, 4] = sum(@view sol[i][ind, 16:21])
+        mat[i, 5] = sum(@view sol[i][ind, 22:25])
+        mat[i, 6] = sum(@view sol[i][ind, 26:27])
         mat[i, 7] = sol[i][ind, 28]
     end
 end
 
 function _fillputmatrix!(mat, sol, inds)
     for i ∈ eachindex(sol) 
-        mat[i, 1] = sum(sol[i][inds, 1])
-        mat[i, 2] = sum(sol[i][inds, 2:5])
-        mat[i, 3] = sum(sol[i][inds, 6:15])
-        mat[i, 4] = sum(sol[i][inds, 16:21])
-        mat[i, 5] = sum(sol[i][inds, 22:25])
-        mat[i, 6] = sum(sol[i][inds, 26:27])
-        mat[i, 7] = sum(sol[i][inds, 28])
+        mat[i, 1] = sum(@view sol[i][inds, 1])
+        mat[i, 2] = sum(@view sol[i][inds, 2:5])
+        mat[i, 3] = sum(@view sol[i][inds, 6:15])
+        mat[i, 4] = sum(@view sol[i][inds, 16:21])
+        mat[i, 5] = sum(@view sol[i][inds, 22:25])
+        mat[i, 6] = sum(@view sol[i][inds, 26:27])
+        mat[i, 7] = sum(@view sol[i][inds, 28])
     end
 end
 
@@ -456,6 +456,23 @@ BenchmarkTools.Trial: 8 samples with 1 evaluation.
 =#
 
 #=
+@benchmark sol = solve(prob, Vern9(lazy=false);
+                  p, u0, callback=cbs, saveat,
+                  abstol=1e-15, maxiters=5e4,
+              )
+BenchmarkTools.Trial: 49 samples with 1 evaluation.
+ Range (min … max):   82.406 ms … 151.593 ms  ┊ GC (min … max): 0.00% … 35.99%
+ Time  (median):      99.555 ms               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   103.017 ms ±  16.363 ms  ┊ GC (mean ± σ):  5.39% ± 11.15%
+
+                ▂█   
+  ▃▁▄▁▁▄▁▁▁▁▁▁▄▇██▄▁▃▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄▃▁▄ ▁
+  82.4 ms          Histogram: frequency by time          152 ms <
+
+ Memory estimate: 46.00 MiB, allocs estimate: 294696.
+=#
+
+#=
 sol_out = makeoutputmatrices(sol)
 
 fig = Figure(; size=( 1000, 1000 ))
@@ -492,11 +509,11 @@ intagedatamatrix = let
     end
     # this is per 100_000 -- convert to numbers using the population numbers used above 
     agedatamatrix[:, 1] .*= (55_690 / 100_000)
-    agedatamatrix[:, 2] .*= (sum(pops[2:5]) / 100_000)
-    agedatamatrix[:, 3] .*= (sum(pops[6:15]) / 100_000)
-    agedatamatrix[:, 4] .*= (sum(pops[16:21]) / 100_000)
-    agedatamatrix[:, 5] .*= (sum(pops[22:25]) / 100_000)
-    agedatamatrix[:, 6] .*= (sum(pops[26:27]) / 100_000)
+    agedatamatrix[:, 2] .*= (sum(@view pops[2:5]) / 100_000)
+    agedatamatrix[:, 3] .*= (sum(@view pops[6:15]) / 100_000)
+    agedatamatrix[:, 4] .*= (sum(@view pops[16:21]) / 100_000)
+    agedatamatrix[:, 5] .*= (sum(@view pops[22:25]) / 100_000)
+    agedatamatrix[:, 6] .*= (sum(@view pops[26:27]) / 100_000)
     agedatamatrix[:, 7] .*= (pops[28] / 100_000)
     for k ∈ axes(agedatamatrix, 1) 
         i = size(agedatamatrix, 1) + 1 - k 
