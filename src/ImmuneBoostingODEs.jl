@@ -1,12 +1,13 @@
 
 module ImmuneBoostingODEs 
 
-using CairoMakie, CSV, DataFrames, DifferentialEquations, DrWatson, FFTW, Optimization, 
-    SciMLSensitivity, StatsBase, Zygote
+using CairoMakie, CSV, DataFrames, DifferentialEquations, DrWatson, FFTW, #Optimization, 
+    #SciMLSensitivity, 
+    StatsBase#, #Zygote
 using LinearAlgebra: eigen
-using OptimizationFlux: ADAM
+#using OptimizationFlux: ADAM
 using Roots: ZeroProblem
-import Base: oneto
+#import Base: oneto
 
 include("structs.jl")
 include("consts.jl")
