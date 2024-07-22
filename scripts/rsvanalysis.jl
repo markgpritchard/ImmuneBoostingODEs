@@ -292,8 +292,6 @@ const lockdownschoolopencb = PresetTimeCallback(lockdownschoolopentimes, lockdow
 const lockdownschoolclosedtimes = [ 2020.221, 2020.759, 2020.893, 2020.973, 2021.255, 2021.389, 2021.498 ]
 const lockdownschoolclosedcb = PresetTimeCallback(lockdownschoolclosedtimes, lockdownschoolclosed!; save_positions)
 
-
-
 const yearstime = [ x + 0.581 for x ∈ 2007:2022 ]
 const yearscb = PresetTimeCallback(yearstime, updatebirthrate!; save_positions)
 
@@ -416,9 +414,9 @@ solver_v2(prob, solver; kwargs...) = @memoize solve(prob, solver; kwargs...)
 
 
 # test run
-sol = solve(prob, Vern9(lazy=false); 
-    p, u0, callback=cbs, saveat, 
-    abstol=1e-15, maxiters=5e4,
+sol = solve(
+    prob, Vern9(lazy=false); 
+    p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=5e4, 
 )
 
 #=
@@ -470,6 +468,22 @@ BenchmarkTools.Trial: 49 samples with 1 evaluation.
   82.4 ms          Histogram: frequency by time          152 ms <
 
  Memory estimate: 46.00 MiB, allocs estimate: 294696.
+=#
+
+#=
+julia> @benchmark solve(prob, Vern9(lazy=false);
+           p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=5e4, save_idxs=[ 6 * x for x ∈ 1:28 ],
+       )
+BenchmarkTools.Trial: 48 samples with 1 evaluation.
+ Range (min … max):   81.150 ms … 155.690 ms  ┊ GC (min … max): 0.00% … 39.40%
+ Time  (median):      98.318 ms               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   102.335 ms ±  16.122 ms  ┊ GC (mean ± σ):  5.99% ± 12.33%
+
+              ▁▄█   
+  ▃▁▁▁▃▁▁▁▃▄▁▇████▃▃▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄▄▁▁▁▁▁▁▃ ▁
+  81.2 ms          Histogram: frequency by time          156 ms <
+
+ Memory estimate: 46.13 MiB, allocs estimate: 308819.
 =#
 
 #=
