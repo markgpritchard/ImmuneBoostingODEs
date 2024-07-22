@@ -73,9 +73,18 @@ function sirrrs!(du, u, p, t)
     # infectious then they have an infeasible force of infection on the whole population. 
     # Therefore set a minimum N of one month's births. Will want to modify this slightly to 
     # make it continuously differentiable 
+    #λ = [ 
+    #    p.τ * (p.c[i, 1] * u[2, 1] / p.ν + sum([ p.c[i, j] * u[2, j] / sum(u[1:5, j]) for j ∈ 2:16 ])) * 365.25 
+    #    for i ∈ 1:16
+    #]
     λ = [ 
-        p.τ * (p.c[i, 1] * u[2, 1] / p.ν + sum([ p.c[i, j] * u[2, j] / sum(u[1:5, j]) for j ∈ 2:28 ])) * 365.25 
-        for i ∈ 1:28
+        p.τ * (
+            p.c[i, 1] * sum(u[2, 1:5]) / (p.ν + sum(u[1:5, 1:5])) + 
+            p.c[i, 2] * sum(u[2, 6:10]) / sum(u[1:5, 6:10]) + 
+            p.c[i, 3] * sum(u[2, 11:15]) / sum(u[1:5, 11:15]) + 
+            sum([ p.c[i, j] * u[2, (j + 12)] / sum(u[1:5, (j + 12)]) for j ∈ 4:16 ])
+        ) * 365.25
+        for i ∈ 1:16
     ]
 
     # age 0
@@ -87,42 +96,50 @@ function sirrrs!(du, u, p, t)
     du[6, 1] = λ[1] * u[1, 1]  # cumulative cases
 
     for i ∈ 2:15  # ages 1 to 14 
-        du[1, i] = 3 * p.ω * u[5, i] - λ[i] * u[1, i]                   # S
-        du[2, i] = λ[i] * u[1, i] - p.γ * u[2, i]                                 # I
-        du[3, i] = p.γ * u[2, i] + λ[i] * p.ψ * (u[4, i] + u[5, i]) - (3 * p.ω) * u[3, i]    # R1
-        du[4, i] = 3 * p.ω * u[3, i] - (3 * p.ω + λ[i] * p.ψ) * u[4, i]           # R2
-        du[5, i] = 3 * p.ω * u[4, i] - (3 * p.ω + λ[i] * p.ψ) * u[5, i]           # R3
-        du[6, i] = λ[i] * u[1, i]  # cumulative cases
+        if i <= 5 
+            j = 1 
+        elseif i <= 10 
+            j = 2 
+        else 
+            j = 3 
+        end
+        du[1, i] = 3 * p.ω * u[5, i] - λ[j] * u[1, i]                   # S
+        du[2, i] = λ[j] * u[1, i] - p.γ * u[2, i]                                 # I
+        du[3, i] = p.γ * u[2, i] + λ[j] * p.ψ * (u[4, i] + u[5, i]) - (3 * p.ω) * u[3, i]    # R1
+        du[4, i] = 3 * p.ω * u[3, i] - (3 * p.ω + λ[j] * p.ψ) * u[4, i]           # R2
+        du[5, i] = 3 * p.ω * u[4, i] - (3 * p.ω + λ[j] * p.ψ) * u[5, i]           # R3
+        du[6, i] = λ[j] * u[1, i]  # cumulative cases
     end
 
     # ages 15 to 19 
-    du[1, 16] = 3 * p.ω * u[5, 16] - λ[16] * u[1, 16] - (0.2 + p.μ[16]) * u[1, 16]                 # S
-    du[2, 16] = λ[16] * u[1, 16] - p.γ * u[2, 16] - (0.2 + p.μ[16]) * u[2, 16]                                   # I
-    du[3, 16] = p.γ * u[2, 16] + λ[16] * p.ψ * (u[4, 16] + u[5, 16]) - (3 * p.ω) * u[3, 16] - (0.2 + p.μ[16]) * u[3, 16]      # R1
-    du[4, 16] = 3 * p.ω * u[3, 16] - (3 * p.ω + λ[16] * p.ψ) * u[4, 16] - (0.2 + p.μ[16]) * u[4, 16]             # R2
-    du[5, 16] = 3 * p.ω * u[4, 16] - (3 * p.ω + λ[16] * p.ψ) * u[5, 16] - (0.2 + p.μ[16]) * u[5, 16]             # R3
-    du[6, 16] = λ[16] * u[1, 16]  # cumulative cases
+    du[1, 16] = 3 * p.ω * u[5, 16] - λ[4] * u[1, 16] - (0.2 + p.μ[16]) * u[1, 16]                 # S
+    du[2, 16] = λ[4] * u[1, 16] - p.γ * u[2, 16] - (0.2 + p.μ[16]) * u[2, 16]                                   # I
+    du[3, 16] = p.γ * u[2, 16] + λ[4] * p.ψ * (u[4, 16] + u[5, 16]) - (3 * p.ω) * u[3, 16] - (0.2 + p.μ[16]) * u[3, 16]      # R1
+    du[4, 16] = 3 * p.ω * u[3, 16] - (3 * p.ω + λ[4] * p.ψ) * u[4, 16] - (0.2 + p.μ[16]) * u[4, 16]             # R2
+    du[5, 16] = 3 * p.ω * u[4, 16] - (3 * p.ω + λ[4] * p.ψ) * u[5, 16] - (0.2 + p.μ[16]) * u[5, 16]             # R3
+    du[6, 16] = λ[4] * u[1, 16]  # cumulative cases
 
     for i ∈ 17:27  # ages 20 to 74 
-        du[1, i] = 3 * p.ω * u[5, i] - λ[i] * u[1, i] + 0.2 * u[1, i-1] - (0.2 + p.μ[i]) * u[1, i]                 # S
-        du[2, i] = λ[i] * u[1, i] - p.γ * u[2, i] + 0.2 * u[2, i-1] - (0.2 + p.μ[i]) * u[2, i]                                   # I
-        du[3, i] = p.γ * u[2, i] + λ[i] * p.ψ * (u[4, i] + u[5, i]) - (3 * p.ω) * u[3, i] + 0.2 * u[3, i-1] - (0.2 + p.μ[i]) * u[3, i]      # R1
-        du[4, i] = 3 * p.ω * u[3, i] - (3 * p.ω + λ[i] * p.ψ) * u[4, i] + 0.2 * u[4, i-1] - (0.2 + p.μ[i]) * u[4, i]             # R2
-        du[5, i] = 3 * p.ω * u[4, i] - (3 * p.ω + λ[i] * p.ψ) * u[5, i] + 0.2 * u[5, i-1] - (0.2 + p.μ[i]) * u[5, i]             # R3
-        du[6, i] = λ[i] * u[1, i]  # cumulative cases
+        j = i - 12
+        du[1, i] = 3 * p.ω * u[5, i] - λ[j] * u[1, i] + 0.2 * u[1, i-1] - (0.2 + p.μ[i]) * u[1, i]                 # S
+        du[2, i] = λ[j] * u[1, i] - p.γ * u[2, i] + 0.2 * u[2, i-1] - (0.2 + p.μ[i]) * u[2, i]                                   # I
+        du[3, i] = p.γ * u[2, i] + λ[j] * p.ψ * (u[4, i] + u[5, i]) - (3 * p.ω) * u[3, i] + 0.2 * u[3, i-1] - (0.2 + p.μ[i]) * u[3, i]      # R1
+        du[4, i] = 3 * p.ω * u[3, i] - (3 * p.ω + λ[j] * p.ψ) * u[4, i] + 0.2 * u[4, i-1] - (0.2 + p.μ[i]) * u[4, i]             # R2
+        du[5, i] = 3 * p.ω * u[4, i] - (3 * p.ω + λ[j] * p.ψ) * u[5, i] + 0.2 * u[5, i-1] - (0.2 + p.μ[i]) * u[5, i]             # R3
+        du[6, i] = λ[j] * u[1, i]  # cumulative cases
     end
 
     # age >= 75 
-    du[1, 28] = 3 * p.ω * u[5, 28] - λ[28] * u[1, 28] + 0.2 * u[1, 27] - p.μ[28] * u[1, 28]                 # S
-    du[2, 28] = λ[28] * u[1, 28] - p.γ * u[2, 28] + 0.2 * u[2, 27] - p.μ[28] * u[2, 28]                                   # I
-    du[3, 28] = p.γ * u[2, 28] + λ[28] * p.ψ * (u[4, 28] + u[5, 28]) - (3 * p.ω) * u[3, 28] + 0.2 * u[3, 27] - p.μ[28] * u[3, 28]      # R1
-    du[4, 28] = 3 * p.ω * u[3, 28] - (3 * p.ω + λ[28] * p.ψ) * u[4, 28] + 0.2 * u[4, 27] - p.μ[28] * u[4, 28]             # R2
-    du[5, 28] = 3 * p.ω * u[4, 28] - (3 * p.ω + λ[28] * p.ψ) * u[5, 28] + 0.2 * u[5, 27] - p.μ[28] * u[5, 28]             # R3
-    du[6, 28] = λ[28] * u[1, 28]  # cumulative cases
+    du[1, 28] = 3 * p.ω * u[5, 28] - λ[16] * u[1, 28] + 0.2 * u[1, 27] - p.μ[28] * u[1, 28]                 # S
+    du[2, 28] = λ[16] * u[1, 28] - p.γ * u[2, 28] + 0.2 * u[2, 27] - p.μ[28] * u[2, 28]                                   # I
+    du[3, 28] = p.γ * u[2, 28] + λ[16] * p.ψ * (u[4, 28] + u[5, 28]) - (3 * p.ω) * u[3, 28] + 0.2 * u[3, 27] - p.μ[28] * u[3, 28]      # R1
+    du[4, 28] = 3 * p.ω * u[3, 28] - (3 * p.ω + λ[16] * p.ψ) * u[4, 28] + 0.2 * u[4, 27] - p.μ[28] * u[4, 28]             # R2
+    du[5, 28] = 3 * p.ω * u[4, 28] - (3 * p.ω + λ[16] * p.ψ) * u[5, 28] + 0.2 * u[5, 27] - p.μ[28] * u[5, 28]             # R3
+    du[6, 28] = λ[16] * u[1, 28]  # cumulative cases
 
 
 end
-
+#=
 function _contactmatrixrowcolconversion(x)
     if x <= 15 
         return 1 + round(Int, (x - 1) / 5, RoundDown)
@@ -130,17 +147,22 @@ function _contactmatrixrowcolconversion(x)
         return x - 12 
     end
 end
+=#
+#=
+_contactmatrixrowcolconversion(x) = x
 
 _cmrc(x) = _contactmatrixrowcolconversion(x)
+=#
 
 function makecontactmatrix(source)
     contacts_df = CSV.read(source, DataFrame; header=false)
-    contacts_raw = Matrix(contacts_df)
+    #=contacts_raw = Matrix(contacts_df)
     contacts = Matrix{Float64}(undef, 28, 28)
-    for i ∈ 1:28, j ∈ 1:28 
+    for i ∈ 1:16, j ∈ 1:16 
         contacts[i, j] = contacts_raw[_cmrc(i), _cmrc(j)]
     end
-    return contacts
+    return contacts =#
+    return Matrix(contacts_df)
 end
 
 function makeoutputmatrices(sol)
@@ -414,6 +436,23 @@ BenchmarkTools.Trial: 5 samples with 1 evaluation.
   1.06 s         Histogram: frequency by time        1.12 s <
 
  Memory estimate: 1.27 GiB, allocs estimate: 13341552.
+=#
+
+#=
+julia> @benchmark sol = solve(prob, Vern9(lazy=false);
+                  p, u0, callback=cbs, saveat,
+                  abstol=1e-15, maxiters=5e4,
+              )
+BenchmarkTools.Trial: 8 samples with 1 evaluation.
+ Range (min … max):  541.239 ms … 691.330 ms  ┊ GC (min … max): 11.07% … 19.27%
+ Time  (median):     611.782 ms               ┊ GC (median):    19.84%
+ Time  (mean ± σ):   614.897 ms ±  50.827 ms  ┊ GC (mean ± σ):  16.95% ±  4.58%
+
+  ▁              ▁▁       ▁       █                       ▁   ▁  
+  █▁▁▁▁▁▁▁▁▁▁▁▁▁▁██▁▁▁▁▁▁▁█▁▁▁▁▁▁▁█▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁█▁▁▁█ ▁
+  541 ms           Histogram: frequency by time          691 ms <
+
+ Memory estimate: 653.47 MiB, allocs estimate: 5547678.
 =#
 
 #=
