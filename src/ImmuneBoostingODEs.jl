@@ -1,13 +1,9 @@
 
 module ImmuneBoostingODEs 
 
-using CairoMakie, CSV, DataFrames, DifferentialEquations, DrWatson, FFTW, #Optimization, 
-    #SciMLSensitivity, 
-    StatsBase#, #Zygote
+using CairoMakie, CSV, DataFrames, DifferentialEquations, DrWatson, FFTW, StatsBase
 using LinearAlgebra: eigen
-#using OptimizationFlux: ADAM
 using Roots: ZeroProblem
-#import Base: oneto
 
 include("structs.jl")
 include("consts.jl")
@@ -15,14 +11,14 @@ include("processdata.jl")
 include("equilibria.jl")
 include("model.jl")
 include("analysedata.jl")
-include("optimization.jl")
+include("ras_model.jl")
 include("equilibriumsurface.jl")
 include("plotting.jl")
 include("plotformating.jl")
 
 export 
     # structs.jl 
-    SirnsParameters, LambdaParms,
+    LambdaParms, SirnsParameters, SirrrsParameters, 
     # consts.jl"
     COLOURVECTOR, COLOUR_I, COLOUR_R, COLOUR_S, MONTHDAYS,
     #processdata.jl
@@ -35,8 +31,10 @@ export
     restoretransmission!, run_sirns, sirns!, sirns_u0, 
     # analysedata.jl
     fourierhmdata,
-    # optimization.jl 
-    iterativeopt, opt_changetransmission!, opt_restoretransmission!, 
+    # ras_model.jl 
+    makecontactmatrix, makeoutputmatrices, makeoutputmatrix_cumcases, 
+    makeoutputmatrix_incidentcases, makeoutputmatrix_infectious, makeoutputmatrix_N, 
+    makeoutputmatrix_resistant, makeoutputmatrix_susceptible, sirrrs!,
     # equilibriumsurface.jl
     labelequilibriumsurface!, plotequilibriumsurface!,
     # plotting.jl
