@@ -548,15 +548,16 @@ end
 
 @model function fitmodel(data, prob, u0, cbs, mortality)
     #τ ~ truncated(Exponential(0.1), 1e-6, 10.0)
-    τ ~ Exponential(0.1)
-    ψ ~ Exponential(1) 
+    τ ~ truncated(Exponential(0.1), 0.0, 10.0)
+    ψ ~ truncated(Exponential(1), 0.0, 100.0) 
     ϕ ~ Beta(1, 1)
 
     p = SirrrsParameters(τ, contacts_alllocations, 48.7, births[1], mortality, ψ, 0.913)
     #@memoize solve(prob, Vern9(lazy=false); 
     #    p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=5e4,
     #)
-    sol = solver_v2(prob, Vern9(lazy=false); 
+    sol = solver_v2(
+        prob, Vern9(lazy=false); 
         p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=5e4,
     )
     #println("sol.retcode=$(sol.retcode), $(sol.retcode != :Success) when τ=$τ, ψ=$ψ, ϕ=$ϕ")
@@ -646,6 +647,44 @@ resultdict = Dict(
 
 safesave(datadir("sims", "firstchain.jld2"), resultdict)
 
+pt = increment_n_rounds!(new_pt, 1)
+new_pt = pigeons(pt)
+new_chains = Chains(new_pt)
+
+resultdict = Dict(
+    "chain" => new_chains, 
+    "pt" => new_pt, 
+    "n_rounds" => 2, 
+    "n_chains" => 16,
+)
+
+safesave(datadir("sims", "firstchain.jld2"), resultdict)
+
+pt = increment_n_rounds!(new_pt, 1)
+new_pt = pigeons(pt)
+new_chains = Chains(new_pt)
+
+resultdict = Dict(
+    "chain" => new_chains, 
+    "pt" => new_pt, 
+    "n_rounds" => 3, 
+    "n_chains" => 16,
+)
+
+safesave(datadir("sims", "firstchain.jld2"), resultdict)
+
+pt = increment_n_rounds!(new_pt, 1)
+new_pt = pigeons(pt)
+new_chains = Chains(new_pt)
+
+resultdict = Dict(
+    "chain" => new_chains, 
+    "pt" => new_pt, 
+    "n_rounds" => 4, 
+    "n_chains" => 16,
+)
+
+safesave(datadir("sims", "firstchain.jld2"), resultdict)
 
 ###
 ###
