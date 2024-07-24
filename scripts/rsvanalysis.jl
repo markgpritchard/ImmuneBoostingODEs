@@ -1,7 +1,7 @@
 
 using DrWatson
 @quickactivate :ImmuneBoostingODEs
-using DataFrames, DifferentialEquations, Distributions, Memoization, Pigeons, Turing
+using DataFrames, DifferentialEquations, Distributions, Memoization, Pigeons, Random, Turing
 
 #using CSV
 #using CairoMakie
@@ -278,13 +278,15 @@ end
 # Parameter fitting model
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+memosolver(prob, solver; kwargs...) = @memoize solve(prob, solver; kwargs...)
+
 @model function fitmodel(data, prob, u0, cbs, mortality)
     τ ~ truncated(Exponential(0.1), 0.0, 10.0)
     ψ ~ truncated(Exponential(1), 0.0, 100.0) 
     ϕ ~ Beta(1, 1)
 
     p = SirrrsParameters(τ, contacts_alllocations, 48.7, births[1], mortality, ψ, 0.913)
-    sol = solver_v2(
+    sol = memosolver(
         prob, Vern9(lazy=false); 
         p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=5e4,
     )
@@ -341,12 +343,12 @@ fitted_pt = pigeons( ;
 new_pt = fitted_pt
 
 for i ∈ 1:n_rounds
-    filename = "rsvparameters_id_$(seednumber)_nrounds_$(i).jld2"
+    filename = "rsvparameters_id_$(id)_nrounds_$(i).jld2"
     if isfile(datadir("sims", filename))
-        new_pt = load(datadir("sims", filename))["pt"]
+        global new_pt = load(datadir("sims", filename))["pt"]
     else
         pt = increment_n_rounds!(new_pt, 1)
-        new_pt = pigeons(pt)
+        global new_pt = pigeons(pt)
         new_chains = Chains(new_pt)
         resultdict = Dict(
             "chain" => new_chains, 
