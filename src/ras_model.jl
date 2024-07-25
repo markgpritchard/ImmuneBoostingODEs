@@ -172,3 +172,42 @@ function makeoutputmatrix_incidentcases(sol)
     end
     return incidentcases
 end
+
+memosolver(prob, alg; kwargs...) = @memoize solve(prob, alg; kwargs...)
+
+function solvesamples(prob, samplevalues; kwargs...)
+    nsamples = size(samplevalues, 1)
+    sample1 = solvesample(prob, samplevalues, 1; kwargs...)
+    output = Array{Float64}(undef, size(sample1)..., nsamples)
+    output[:, :, 1] .= sample1
+    for i ∈ 2:nsamples
+        output[:, :, i] .= solvesample(prob, samplevalues, i; kwargs...)
+    end
+    means = Array{Float64}(undef, size(sample1)...)
+    lq = Array{Float64}(undef, size(sample1)...)
+    uq = Array{Float64}(undef, size(sample1)...)
+    for i ∈ axes(output, 1), j ∈ axes(output, 2)
+        means[i, j] = mean(output[i, j, :])
+        lqv, uqv = quantile(output[i, j, :], [ 0.05, 0.95 ])
+        lq[i, j] = lqv
+        uq[i, j] = uqv
+    end
+    return @ntuple means lq uq
+end
+
+function solvesample(prob, samplevalues, ind::Integer; kwargs...)
+    τ = samplevalues.τ[ind]
+    ψ = samplevalues.ψ[ind]
+    ϕ = samplevalues.ϕ[ind]
+    return solvesample(prob, τ, ψ, ϕ; kwargs...)
+end
+
+function solvesample(prob, τ, ψ, ϕ;
+    births, callbackset, contacts_alllocations, mortality, saveat, u0, 
+    abstol=1e-15, alg=Vern9(lazy=false), gamma=48.7, maxiters=5e4, omega=0.913
+)
+    p = SirrrsParameters(τ, contacts_alllocations, gamma, births[1], mortality, ψ, omega)
+    sol = memosolver(prob, alg; p, u0, callback=callbackset, saveat, abstol, maxiters,)
+    incidentcases = makeoutputmatrix_incidentcases(sol)
+    return incidentcases .* ϕ
+end

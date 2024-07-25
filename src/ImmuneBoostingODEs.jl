@@ -3,6 +3,7 @@ module ImmuneBoostingODEs
 
 using CairoMakie, CSV, DataFrames, DifferentialEquations, DrWatson, FFTW, StatsBase
 using LinearAlgebra: eigen
+using Memoization: @memoize
 using Roots: ZeroProblem
 
 include("structs.jl")
@@ -21,7 +22,7 @@ export
     LambdaParms, SirnsParameters, SirrrsParameters, 
     # consts.jl"
     COLOURVECTOR, COLOUR_I, COLOUR_R, COLOUR_S, MONTHDAYS,
-    #processdata.jl
+    # processdata.jl
     printrawdate, processagedata, processcrgtvdata, processrsvdata,
     # equilibria.jl
     bifurcationlimits, equil, equileigen, equili, equilplotdata, equilr, 
@@ -34,13 +35,14 @@ export
     # ras_model.jl 
     makecontactmatrix, makeoutputmatrices, makeoutputmatrix_cumcases, 
     makeoutputmatrix_incidentcases, makeoutputmatrix_infectious, makeoutputmatrix_N, 
-    makeoutputmatrix_resistant, makeoutputmatrix_susceptible, sirrrs!,
+    makeoutputmatrix_resistant, makeoutputmatrix_susceptible, memosolver, sirrrs!, 
+    solvesample, solvesamples,
     # equilibriumsurface.jl
     labelequilibriumsurface!, plotequilibriumsurface!,
     # plotting.jl
-    modelflowchart!, plotequilibrium!, plotequilibriuma!, plotequilibriumb!, plotequilibriumc!,
-    plotequilibriumproportions!, plotfourier!, plotimmuneduration!, plotnpi!, plotrsvage!, 
-    plotrsvsim!, plotsi!, plotstringency!,
+    modelflowchart!, plotchains, plotequilibrium!, plotequilibriuma!, plotequilibriumb!,
+    plotequilibriumc!, plotequilibriumproportions!, plotfourier!, plotimmuneduration!, 
+    plotnpi!, plotrsvage!, plotrsvsim!, plotsi!, plotstringency!,
     # plotformating.jl 
     formataxis!, labelplots!, setvalue!
  
