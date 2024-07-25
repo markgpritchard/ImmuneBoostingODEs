@@ -3,6 +3,7 @@
 #SBATCH --ntasks-per-node=32
 #SBATCH --time=00:10:00
 #SBATCH --partition=devel
+#SBATCH --clusters=all
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=mark.pritchard@ndm.ox.ac.uk
 
