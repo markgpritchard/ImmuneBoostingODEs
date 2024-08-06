@@ -56,10 +56,10 @@ sampleincidence = solvesamples(
 fig = Figure(; size=( 800, 800 ))
 axs = [ Axis(fig[i, 1]) for i ∈ 1:7 ]
 for i ∈ 1:7 
-    scatter!(axs[i], saveat, intagedatamatrix[:, i]; color=:black, markersize=3)
-    lines!(axs[i], saveat, sampleincidence.means[:, i])
+    scatter!(axs[i], saveat[2:end], intagedatamatrix[2:end, i]; color=:black, markersize=3)
+    lines!(axs[i], saveat[2:end], sampleincidence.means[2:end, i])
     band!(
-        axs[i], saveat, sampleincidence.lq[:, i], sampleincidence.uq[:, i]; 
+        axs[i], saveat[2:end], sampleincidence.lq[2:end, i], sampleincidence.uq[2:end, i]; 
         color=( :gray, 0.25 )
     )
 

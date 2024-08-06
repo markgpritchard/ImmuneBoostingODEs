@@ -70,6 +70,7 @@ sol = solve(
     incidentcases = makeoutputmatrix_incidentcases(sol)
 
     for i ∈ axes(incidentcases, 1), j ∈ axes(incidentcases, 2)
+        i == 1 && continue  # first row of incident cases always 0
         data[i, j] ~ Poisson(incidentcases[i, j] * ϕ + 1e-10)
     end
 end

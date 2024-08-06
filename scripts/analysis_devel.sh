@@ -2,6 +2,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=32
 #SBATCH --time=00:10:00
+#SBATCH --mem-per-cpu=10G
 #SBATCH --partition=devel
 #SBATCH --clusters=all
 #SBATCH --mail-type=ALL
