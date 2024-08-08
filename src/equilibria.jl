@@ -276,7 +276,9 @@ function _findpsi(ind, psivector, β, γ, μ, ω, sigdigits; kwargs...)
     # vector for second iteration 
     v = _findpsivector(ind, psivector) 
     # 2nd to penultimate iterations
-    for _ ∈ oneto(sigdigits - 2) v = findpsivector(v, β, γ, μ, ω) end 
+    for _ ∈ 1:(sigdigits - 2) 
+        v = findpsivector(v, β, γ, μ, ω) 
+    end 
     # final iteration
     ind = findpsiindex(v, β, γ, μ, ω)
     return v[ind]

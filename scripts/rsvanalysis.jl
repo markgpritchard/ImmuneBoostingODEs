@@ -1,11 +1,29 @@
 
 using DrWatson
 @quickactivate :ImmuneBoostingODEs
-using DataFrames, DifferentialEquations
+using DataFrames, DifferentialEquations, Pigeons, Random, Turing
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#using CairoMakie
+
+testrun = true 
+
+if length(ARGS) == 3 
+    omega = parse(Float64, ARGS[1])
+    id = parse(Int, ARGS[2])
+    n_rounds = min(12, parse(Int, ARGS[3]))
+else
+    omega = 2.0
+    id = 1 
+    if testrun 
+        n_rounds = 4 
+    else
+        n_rounds = 10
+    end
+end
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Load the data 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # RSV data from Scotland
 data = processrsvdata("respiratory_scot.csv", "rsv.csv")
@@ -44,180 +62,127 @@ for y ∈ 2016:2022
 end 
 
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Parameters used frequently in this script 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Fitting parameters 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Allows the same parameters to be used in multiple models without having a large 
-# number of values in global scope potentially leading to unexpected results
-rsvparms = let 
-    γ = 48.7    # generation time 7.5 days
-    μ = .0087   # Scotland's birth rate = 48000 / 5.5e6
-    ϕ = -.5π
+saveat = let 
+    savefirst = data.Date[1] - 7 / 365  # to allow calculation of new cases in first week
+    [ [ savefirst ]; data.Date ]
+end
 
+## Callbacks  
+cbs = let 
     # When is the infection parameter expected to change?
     # Find dates (as fractions of year) when Strigency Index goes above then below 50
     inds = findall(x -> x >= 50, crgtdata.StringencyIndex_Average)
     reduceday = crgtdata.Date[inds[1]]
     increaseday = crgtdata.Date[last(inds)]
-    println("Stringency ≥ 50 on $(printrawdate(crgtdata.RawDate[inds[1]]))")
-    println("Stringency < 50 on $(printrawdate(crgtdata.RawDate[last(inds)]))")
-    # note the Stringency Index is plotted by code in `npisimulation.jl`
-
-    # Vector of recorded cases 
-    casesvector = data.Cases 
-
-    ## Times when we have data pre-lockdown (i.e. times to save simulation)
-    # add one pre-data date so that we can calculate a weekly incidence for the first data point
-    savetimes = [ minimum(data.Date) - 7 / 365; data.Date ] # 354 elements
-
-    @ntuple ϕ γ μ casesvector reduceday increaseday savetimes
-end
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Optimize magnitude of the effect of non-pharmaceutical interventions 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Callbacks for optimization 
-opt_cbs = let 
-    @unpack increaseday, reduceday = rsvparms
     save_positions = ( false, false )
-    resetcb = PresetTimeCallback(reduceday + 1e-9, opt_restoretransmission!; save_positions)
-    rescb = PresetTimeCallback(increaseday, opt_changetransmission!; save_positions)
+    resetcb = PresetTimeCallback(reduceday + 1e-9, reducetransmission!; save_positions)
+    rescb = PresetTimeCallback(increaseday, restoretransmission!; save_positions)
     CallbackSet(resetcb, rescb)
 end
 
-multipliers_psi0 = let 
-    @unpack casesvector, increaseday, reduceday, savetimes = rsvparms
-    R0 = 1.215
-    β1 = .1
-    ψ = 0
-    initialvalues = [ .8, 1. ]
-    iterativeopt(R0, β1, ψ, initialvalues; 
-        casesvector, increaseday, opt_cbs, reduceday, savetimes) 
-end
-
-multipliers_psi5 = let 
-    @unpack casesvector, increaseday, reduceday, savetimes = rsvparms
-    R0 = 1.285
-    β1 = .082
-    ψ = 5
-    initialvalues = [ .8, 1. ]
-    iterativeopt(R0, β1, ψ, initialvalues;
-        casesvector, increaseday, opt_cbs, reduceday, savetimes) 
-end
-
-multipliers_psi13_2 = let 
-    @unpack casesvector, increaseday, reduceday, savetimes = rsvparms
-    R0 = 1.6
-    β1 = 0
-    ψ = 13.2
-    initialvalues = [ .8, 1. ]
-    iterativeopt(R0, β1, ψ, initialvalues; 
-        casesvector, increaseday, opt_cbs, reduceday, savetimes) 
-end
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Simulate data 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Define the ODE problem 
 prob = let 
-    # different parameters may be used in the simulations
-    @unpack ϕ, γ, μ = rsvparms
-    R0 = 1.6 
-    β0 = R0 * (γ + μ)
-    ω = 365.25 / 400
-    β1 = .0 
-    ψ = 0
-
-    tspan = ( 1015.35, 2023.6 )
-    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, 1., 1.) 
-    I0 = .007
-    S0 = .5
-    u0 = sirns_u0(S0, I0; equalrs = true, p, t0 = 1015.35)
+    p = SirnsParameters(50.0, 0.1, 0.0, 48.7, 0.0087, 0.0, 2.0, 50.0, 50.0, 50.0) 
+    u0 = sirns_u0(0.01, 2e-5; p, equalrs=true, t0=1996.737)
+    tspan = ( 1996.737, last(saveat) )
     ODEProblem(sirns!, u0, tspan, p)
 end
 
-## Run the simulations 
+@model function fitmodel(
+    incidence, prob, cbs, saveat;
+    betazeroprior=truncated(Exponential(100), 0, 4870),  # truncated at R0 = 100
+    betaoneprior=Uniform(0, 0.9),
+    phiprior=Uniform(0, 2π),
+    psiprior=truncated(Exponential(1), 0, 1000),
+    betareduction1prior=Beta(4, 1),
+    betareduction2prior=Beta(9, 1),
+    omega=2.0,
+    detectionprior=Beta(1, 98)
+)
+    β0 ~ betazeroprior
+    β1 ~ betaoneprior
+    ϕ ~ phiprior
+    γ = 48.7  # generation time 7.5 days
+    μ = 0.0087  # Scotland's birth rate = 48000 / 5.5e6
+    ψ ~ psiprior
+    ω = omega
+    βreduction1 ~ betareduction1prior
+    βreduction2 ~ betareduction2prior
+    detection ~ detectionprior
 
-# Without immune boosting
-rsvsim_psi0 = let 
-    @unpack ϕ, γ, μ, reduceday, increaseday, savetimes = rsvparms
-    βreduction, βreturn = multipliers_psi0 
-    R0 = 1.215
-    ψ = 0
-    immuneduration = .5
-    β1 = .1
-    θ = .0025
-    β0 = R0 * (γ + μ)
-    ω = 1 / immuneduration 
-    
-    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, βreduction, βreturn) 
-    u0 = sirns_u0(.5, .001; equalrs = true, p, t0 = .35)
-    save_positions = ( false, false )
-    redcb = PresetTimeCallback(reduceday, reducetransmission!; save_positions)
-    rescb = PresetTimeCallback(increaseday, restoretransmission!; save_positions)
-    cbs = CallbackSet(redcb, rescb)
-    
-    sol = solve(prob, Vern9(lazy = false); 
-        p, u0, callback = cbs, saveat = savetimes, 
-        abstol = 1e-15, reltol = 1e-15, maxiters = 1e7)
-    compartments = modelcompartments(sol, p)
-    cases = casespertimeblock(compartments[:cc]) * 5_500_000 * θ
-    @ntuple compartments cases
-end 
+    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, β0, βreduction1 * β0, βreduction2 * β0)
+    u0 = sirns_u0(0.01, 2e-5; p, equalrs=true, t0=1996.737)  # 10 years before data collection
 
-rsvsim_psi5 = let 
-    @unpack ϕ, γ, μ, reduceday, increaseday, savetimes = rsvparms
-    βreduction, βreturn = multipliers_psi5
-    R0 = 1.285
-    ψ = 5
-    immuneduration = .5
-    β1 = .082
-    θ = .0025
-    β0 = R0 * (γ + μ)
-    ω = 1 / immuneduration 
+    sol = memosolver(
+        prob, Vern9(; lazy=false); 
+        p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=1e7,
+    )
+    if sol.retcode != :Success
+        @info "Adding logprob -Inf when p=$p, detection=$detection"
+        Turing.@addlogprob! -Inf
+        return nothing
+    end
 
-    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, βreduction, βreturn) 
-    u0 = sirns_u0(.5, .001; equalrs = true, p, t0 = .35) 
-    save_positions = ( false, false )
-    redcb = PresetTimeCallback(reduceday, reducetransmission!; save_positions)
-    rescb = PresetTimeCallback(increaseday, restoretransmission!; save_positions)
-    cbs = CallbackSet(redcb, rescb)
+    cumulativecases = modelcompartments(sol, :cc)
+    incidentcases = casespertimeblock(cumulativecases) .* 5_450_000 .* detection
 
-    sol = solve(prob, Vern9(lazy = false); 
-        p, u0, callback = cbs, saveat = savetimes, 
-        abstol = 1e-15, reltol = 1e-15, maxiters = 1e7)
-    compartments = modelcompartments(sol, p)
-    cases = casespertimeblock(compartments[:cc]) * 5_500_000 * θ
-    @ntuple compartments cases
-end 
+    for i ∈ eachindex(incidentcases)
+        incidence[i] ~ Poisson(incidentcases[i] + 1e-10)
+    end
+end
 
-rsvsim_psi13_2 = let 
-    @unpack ϕ, γ, μ, reduceday, increaseday, savetimes = rsvparms
-    βreduction, βreturn = multipliers_psi13_2
-    R0 = 1.6
-    ψ = 13.2
-    immuneduration = .5
-    β1 = ϕ = 0
-    θ = .0025
-    β0 = R0 * (γ + μ)
-    ω = 1 / immuneduration 
+function fitmodel_target(incidence=data.Cases, prob=prob, cbs=cbs, saveat=saveat; kwargs...)
+    return Pigeons.TuringLogPotential(fitmodel(incidence, prob, cbs, saveat; kwargs...))
+end
 
-    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, βreduction, βreturn) 
-    u0 = sirns_u0(.5, .001; equalrs = true, p, t0 = .35)
-    save_positions = ( false, false )
-    redcb = PresetTimeCallback(reduceday, reducetransmission!; save_positions)
-    rescb = PresetTimeCallback(increaseday, restoretransmission!; save_positions)
-    cbs = CallbackSet(redcb, rescb)
+const FitmodelType = typeof(fitmodel_target())
 
-    sol = solve(prob, Vern9(lazy = false); 
-        p, u0, callback = cbs, saveat = savetimes, 
-        abstol = 1e-15, reltol = 1e-15, maxiters = 5e6)
-    compartments = modelcompartments(sol, p)
-    cases = casespertimeblock(compartments[:cc]) * 5_500_000 * θ
-    @ntuple compartments cases
-end 
+function Pigeons.initialization(target::FitmodelType, rng::AbstractRNG, ::Int64)
+    result = DynamicPPL.VarInfo(
+        rng, target.model, DynamicPPL.SampleFromPrior(), DynamicPPL.PriorContext()
+    )
+    DynamicPPL.link!!(result, DynamicPPL.SampleFromPrior(), target.model)
+
+    Pigeons.update_state!(result, :β0, 1, 2.0)
+    Pigeons.update_state!(result, :β1, 1, 0.1)
+    Pigeons.update_state!(result, :ϕ, 1, 0.0)
+    Pigeons.update_state!(result, :ψ, 1, 0.0)
+    Pigeons.update_state!(result, :βreduction1, 1, 0.9)
+    Pigeons.update_state!(result, :βreduction1, 1, 1.0)
+    Pigeons.update_state!(result, :detection, 1, 0.02)
+
+    return result
+end
+
+fitted_pt = pigeons( ;
+    target=fitmodel_target(; omega), 
+    n_rounds=0,
+    n_chains=6,
+    multithreaded=true,
+    record=[ traces; record_default() ],
+    seed=id,
+    variational=GaussianReference(),
+)
+
+new_pt = fitted_pt
+
+for i ∈ 1:n_rounds
+    filename = "rsvparameters_omega_$(omega)_id_$(id)_nrounds_$(i).jld2"
+    if isfile(datadir("sims", filename))
+        global new_pt = load(datadir("sims", filename))["pt"]
+    else
+        pt = increment_n_rounds!(new_pt, 1)
+        global new_pt = pigeons(pt)
+        new_chains = Chains(new_pt)
+        resultdict = Dict(
+            "chain" => new_chains, 
+            "pt" => new_pt, 
+            "n_rounds" => i, 
+            "n_chains" => 6,
+        )
+        safesave(datadir("sims", filename), resultdict)
+    end
+end

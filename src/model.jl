@@ -22,9 +22,11 @@ The function `sirns_u0` can be used to produce an appropriate vector for `u`. No
 function sirns!(du, u, p, t)
     # Hard-coded to run with 3 resistant subcompartments 
     S, I, R1, R2, R3, x1, x2, cc = u 
+    #@assert minimum(u[1:5]) >= 0
 
     # transmission parameter
     β = p.β0 * (1 + p.β1 * x1) # more efficient version than cos(2π(t-ϕ))
+    @assert β >= 0 "β<0 when p=$p, x1=$x1"
     λ = β * I
     _sirns!(du, u, p, t, λ)
 end 
@@ -39,7 +41,7 @@ function _sirns!(du, u, p, t, λ)
     du[5] = 3 * p.ω * R2 - (3 * p.ω + λ * p.ψ + p.μ) * R3           # R3
     du[6] = -2π * x2                                                # x1
     du[7] = 2π * x1                                                 # x2
-    du[8] = λ * S                                          # cumulative cases 
+    du[8] = λ * S                                                   # cumulative cases 
 end
 
 sirns!(du, u, p::LambdaParms, t) = constantlambda_sirns!(du, u, p, t)
@@ -219,8 +221,10 @@ function casespertimeblock(cc::Vector{T}) where T
         # newcases should always be positive but occasionally the solver returns 
         # a very slightly negative value, such as -3e-298. Such values cannot be 
         # used with a Poisson distribution 
-        if newcases < 0  cases[i-1] = zero(T) 
-        else             cases[i-1] = newcases
+        if newcases < 0  
+            cases[i-1] = zero(newcases) 
+        else             
+            cases[i-1] = newcases
         end
     end
     return cases
@@ -231,9 +235,10 @@ end
 # Function to run the simulations with DrWatson.produce_or_load
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-function modelincidence(p::AbstractParameters; 
-        equalrs = true, I0 = .001, S0 = .5, tspan = ( -1000., 10. )   
-    )
+function modelincidence(
+    p::AbstractParameters; 
+    equalrs=true, I0=0.001, S0=0.5, tspan=( -1000.0, 10.0 )   
+)
     u0 = sirns_u0(S0, I0; equalrs, p)
     sol = run_sirns(u0, p, tspan)
     cc = modelcompartments(sol, :cc)
@@ -270,16 +275,17 @@ end
 # Default callback functions used to simulate the effect of non-pharmaceutical interventions
 
 function reducetransmission!(integrator) 
-    @unpack β0, β1, ϕ, γ, μ, ψ, ω, βreduction1, βreduction2 = integrator.p
-    newbeta = β0 * βreduction1
-    integrator.p = SirnsParameters(newbeta, β1, ϕ, γ, μ, ψ, ω, βreduction1, βreduction2)
+    @unpack β0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0 = integrator.p
+    integrator.p = SirnsParameters(
+        reducedβ0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0
+    )
 end
 
 # Callback function to restore βmean 
 
 function restoretransmission!(integrator) 
-    @unpack β0, β1, ϕ, γ, μ, ψ, ω, βreduction1, βreduction2 = integrator.p
-    originalβmean = β0 / βreduction1 
-    newbeta = originalβmean * βreduction2
-    integrator.p = SirnsParameters(newbeta, β1, ϕ, γ, μ, ψ, ω, βreduction1, βreduction2)
+    @unpack β0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0 = integrator.p
+    integrator.p = SirnsParameters(
+        restoredβ0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0
+    )
 end
