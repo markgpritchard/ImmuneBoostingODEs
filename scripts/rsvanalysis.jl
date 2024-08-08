@@ -28,9 +28,6 @@ end
 # RSV data from Scotland
 data = processrsvdata("respiratory_scot.csv", "rsv.csv")
 
-# Age-specific data
-agedata = processagedata("respiratory_age.csv", "rsv_age.csv")
-
 # Data from Oxford Covid-19 Government Response Tracker
 crgtdata = processcrgtvdata("OxCGRT_compact_subnational_v1.csv", "crgt.csv")
 
