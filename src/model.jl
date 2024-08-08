@@ -24,7 +24,7 @@ function sirns!(du, u, p, t)
     S, I, R1, R2, R3, x1, x2, cc = u 
 
     # transmission parameter
-    β = p.β0 * (1 + p.β1 * x1) # more efficient version than cos(2π(t-ϕ))
+    β = p.β0 * (1 + p.β1 * x1)  # more efficient version than cos(2π(t-ϕ))
     λ = β * I
     _sirns!(du, u, p, t, λ)
 end 
@@ -39,7 +39,7 @@ function _sirns!(du, u, p, t, λ)
     du[5] = 3 * p.ω * R2 - (3 * p.ω + λ * p.ψ + p.μ) * R3           # R3
     du[6] = -2π * x2                                                # x1
     du[7] = 2π * x1                                                 # x2
-    du[8] = λ * S                                          # cumulative cases 
+    du[8] = λ * S                                                   # cumulative cases 
 end
 
 sirns!(du, u, p::LambdaParms, t) = constantlambda_sirns!(du, u, p, t)
@@ -90,20 +90,23 @@ All keyword arguments are passed to `DifferentialEquations.solve`. The following
 * `reltol = 1e-12` 
 * `saveat = .0005`
 """ 
-function run_sirns(u0::Vector{<:Real}, p::AbstractParameters, duration::Real; t0 = 0, kwargs...)
+function run_sirns(u0::Vector{<:Real}, p::AbstractParameters, duration::Real; t0=0, kwargs...)
     tspan = ( Float64(t0), Float64(duration) )
     return run_sirns(u0, p, tspan; kwargs...)
 end 
 
-function run_sirns(u0::Vector{<:Real}, p::AbstractParameters, tspan::Tuple{<:Real, <:Real}; kwargs...)
+function run_sirns(
+    u0::Vector{<:Real}, p::AbstractParameters, tspan::Tuple{<:Real, <:Real}; 
+    kwargs...
+)
     ts = ( Float64(tspan[1]), Float64(tspan[2]) )
     return run_sirns(u0, p, ts; kwargs...)
 end 
 
-function run_sirns(u0::Vector{<:Real}, p::AbstractParameters, tspan::Tuple{Float64, Float64}; 
-        abstol = 1e-12, alg = Vern9(lazy = false), maxiters = 1e5, reltol = 1e-12, 
-        saveat = .0005, kwargs...
-    )
+function run_sirns(
+    u0::Vector{<:Real}, p::AbstractParameters, tspan::Tuple{Float64, Float64}; 
+    abstol=1e-12, alg=Vern9(; lazy=false), maxiters=1e5, reltol=1e-12, saveat=0.0005, kwargs...
+)
     prob = ODEProblem(sirns!, u0, tspan, p)
     sol = solve(prob, alg; abstol, maxiters, reltol, saveat, kwargs...)
     return sol
@@ -124,7 +127,7 @@ Inputs can be values for all compartments or just for `S0` and `I0`. If only `S0
 * `t0 = 0` to set the start time for the model so that initial values of `β` are calculated 
     correctly.
 """
-function sirns_u0(S0::S, I0::S; p, equalrs = false, kwargs...) where S
+function sirns_u0(S0::S, I0::S; p, equalrs=false, kwargs...) where S
     Rtotal = 1 - (S0 + I0)
     if equalrs 
         rs = Rtotal / 3
@@ -134,14 +137,14 @@ function sirns_u0(S0::S, I0::S; p, equalrs = false, kwargs...) where S
     end 
 end 
 
-function sirns_u0(S0::S, I0, R1, R2, R3; p, t0 = 0) where S
+function sirns_u0(S0::S, I0, R1, R2, R3; p, t0=0) where S
     @assert +(S0, I0, R1, R2, R3) ≈ 1 "+($S0, $I0, $R1, $R2, $R3) = $(+(S0, I0, R1, R2, R3)) != 1"
     @assert min(S0, I0, R1, R2, R3) >= -1e-6 "min($S0, $I0, $R1, $R2, $R3) = $(min(S0, I0, R1, R2, R3)) < 0"
     u0 = Vector{S}(undef, 8)
     for (i, v) ∈ enumerate([ S0, I0, R1, R2, R3 ]) u0[i] = v end  
     u0[6] = cos(2π * t0 - p.ϕ)  # x1 
     u0[7] = sin(2π * t0 - p.ϕ)  # x2
-    u0[8] = zero(S)               # cumulative cases
+    u0[8] = zero(S)             # cumulative cases
     return u0
 end 
 
@@ -219,8 +222,10 @@ function casespertimeblock(cc::Vector{T}) where T
         # newcases should always be positive but occasionally the solver returns 
         # a very slightly negative value, such as -3e-298. Such values cannot be 
         # used with a Poisson distribution 
-        if newcases < 0  cases[i-1] = zero(T) 
-        else             cases[i-1] = newcases
+        if newcases < 0  
+            cases[i-1] = zero(T) 
+        else             
+            cases[i-1] = newcases
         end
     end
     return cases
@@ -231,9 +236,10 @@ end
 # Function to run the simulations with DrWatson.produce_or_load
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-function modelincidence(p::AbstractParameters; 
-        equalrs = true, I0 = .001, S0 = .5, tspan = ( -1000., 10. )   
-    )
+function modelincidence(
+    p::AbstractParameters; 
+    equalrs=true, I0=0.001, S0=0.5, tspan=( -1000.0, 10.0 )   
+)
     u0 = sirns_u0(S0, I0; equalrs, p)
     sol = run_sirns(u0, p, tspan)
     cc = modelcompartments(sol, :cc)

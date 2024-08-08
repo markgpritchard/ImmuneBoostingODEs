@@ -4,7 +4,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 """
-    equil(p; warntol = 1e-10)
+    equil(p; warntol=1e-10)
 
 Calculate proportions in each compartment at equilibrium.
 
@@ -15,7 +15,7 @@ Will return endemic equilibrium if able and disease-free equilibrium otherwise.
 Function checks that the compartments sum to 1. If the difference from 1 is greater 
     than `warntol` a warning is displayed.
 """
-function equil(p; warntol = 1e-10)
+function equil(p; warntol=1e-10)
     u = zeros(5)
     I = equili(p)
     _equil!(u, I, p)
@@ -23,16 +23,20 @@ function equil(p; warntol = 1e-10)
     return u
 end 
 
-function _equil!(u, I, p)
-    if 0 < I <= 1 _endemicequil!(u, I, p)   # endemic equilibrium
-    else          u[1] = 1.                 # disease-free equilibium  
+function _equil!(u::Vector{S}, I, p) where S
+    if 0 < I <= 1  # endemic equilibrium 
+        _endemicequil!(u, I, p)   
+    else  # disease-free equilibium            
+        u[1] = one(S)                
     end 
 end 
 
 function _endemicequil!(u, I, p)
     u[1] = equils(p) 
     u[2] = I 
-    for i ∈ 1:3 u[2+i] = equilri(p, I, i) end 
+    for i ∈ 1:3 
+        u[2+i] = equilri(p, I, i) 
+    end 
 end 
 
 # Provide a warning if needed by `equil`
@@ -40,7 +44,7 @@ function equilwarning(u, warntol)
     if sum(u) < 1 - warntol || sum(u) > 1 + warntol
         @warn """
             equil($p) -> [$u]; sum(u) = $(sum(u))
-            `u` is still returned
+            `u` has been returned but errors may occur
         """
     end
 end 
@@ -61,8 +65,10 @@ equils(p) = equils(p.β0, p.γ, p.μ)
 
 function equils(β0, γ, μ) 
     S = _equils(β0, γ, μ) 
-    if S > 1 return one(S) 
-    else     return S 
+    if S > 1 
+        return one(S) 
+    else     
+        return S 
     end 
 end 
 
@@ -85,7 +91,7 @@ function equili(p)
         Z = ZeroProblem(equiliproblem, ( 0, 1 ))
         return solve(Z, p)
     else # s1 and s2 are the same sign then I* ∉ [0, 1] so no endemic equilibrium
-        return .0 
+        return zero(s1) 
     end
 end 
 
@@ -177,7 +183,9 @@ function sirns_jac!(J, u, p)
     J[1, 2] = -β * S
     J[2, 2] = β * S - p.γ - p.μ
     J[3, 2] = p.γ + β * p.ψ * sum(u[4:5])
-    for i ∈ 4:5 J[i, 2] = -β * p.ψ * u[i] end
+    for i ∈ 4:5 
+        J[i, 2] = -β * p.ψ * u[i] 
+    end
     # with respect to R1 
     J[3, 3] = -3 * p.ω - p.μ
     J[4, 3] = 3 * p.ω 
@@ -225,31 +233,7 @@ function realmaxequileigen(β, γ, μ, ψ, ω; kwargs...)
     p = SirnsParameters(β, γ, μ, ψ, ω)
     return realmaxequileigen(p; kwargs...)
 end
-#=
-""" 
-    equilplotdata(p::SirnsParameters; <keyword arguments>)
 
-Return data to plot whether endemic equilibrium is stable.
-
-Returns:
-* `-1` if no endemic equilibrium 
-* `0` if the endemic equilibrium is unstable 
-* `1` if the endemic equilibrium is stable
-
-All keyword arguments are passed to `realmaxequileigen`.
-"""
-function equilplotdata(p::SirnsParameters; kwargs...)
-    I = equili(p) 
-    if I == 0 
-        return -1               # no endemic equilibium
-    else 
-        eig = realmaxequileigen(p; kwargs...)
-        if eig < 0  return 1    # stable endemic equilibium
-        else        return 0    # unstable endemic equilibium
-        end
-    end
-end
-=#
 """ 
     findpsi(β, γ, μ, ω; sigdigits = 3, <keyword arguments>)
 
@@ -259,9 +243,9 @@ Find the smallest immune boosting parameter at which the endemic equilibrium swi
 `sigdigits` is the number of significant figures calculated. All other keyword arguments 
     are passed to `maxrealequileigen`.
 """
-function findpsi(β, γ, μ, ω; sigdigits = 3, kwargs...)
-    psivector = TRIALPSIS # see consts.jl
-    return _findpsi(psivector, β, γ, μ, ω, sigdigits; kwargs...)
+function findpsi(β, γ, μ, ω; sigdigits=3, kwargs...)
+    # TRIALPSIS is in consts.jl
+    return _findpsi(TRIALPSIS, β, γ, μ, ω, sigdigits; kwargs...)
 end 
 
 function _findpsi(psivector, β, γ, μ, ω, sigdigits; kwargs...)
@@ -270,13 +254,15 @@ function _findpsi(psivector, β, γ, μ, ω, sigdigits; kwargs...)
     return _findpsi(ind, psivector, β, γ, μ, ω, sigdigits; kwargs...)
 end 
 
-_findpsi(ind::Nothing, psivector, β, γ, μ, ω, sigdigits; kwargs...) = NaN
+_findpsi(::Nothing, ::Any, ::Any, ::Any, ::Any, ::Any, ::Any; kwargs...) = NaN
 
 function _findpsi(ind, psivector, β, γ, μ, ω, sigdigits; kwargs...)
     # vector for second iteration 
     v = _findpsivector(ind, psivector) 
     # 2nd to penultimate iterations
-    for _ ∈ oneto(sigdigits - 2) v = findpsivector(v, β, γ, μ, ω) end 
+    for _ ∈ 1:(sigdigits - 2) 
+        v = findpsivector(v, β, γ, μ, ω) 
+    end 
     # final iteration
     ind = findpsiindex(v, β, γ, μ, ω)
     return v[ind]
@@ -292,25 +278,17 @@ function findpsivector(psivector, β, γ, μ, ω)
     return _findpsivector(ind, psivector)
 end
 
-function _findpsivector(ind, psivector)
-    if ind == 1 lower = 0. 
-    else        lower = psivector[ind-1]
+function _findpsivector(ind, psivector::Vector{T}) where T
+    if ind == 1 
+        lower = zero(T)
+    else        
+        lower = psivector[ind-1]
     end
     upper = psivector[ind]
     diff = upper - lower 
     return collect(lower:diff/10:upper)
 end
-#=
-function eigentracks(β, γ, μ, psis, ω)
-    eigenvalues1 = equileigen(SirnsParameters(β, γ, μ, psis[1], ω))
-    eigenvaluesmatrix = Matrix{ComplexF64}(undef, length(eigenvalues1), length(psis))
-    for (i, ψ) ∈ enumerate(psis) 
-        ev = equileigen(SirnsParameters(β, γ, μ, ψ, ω), sortby = λ -> (imag(λ),real(λ)))
-        eigenvaluesmatrix[:, i] = ev
-    end 
-    return @ntuple eigenvalues1 eigenvaluesmatrix
-end
-=#
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Run simulations to find limit cycles for bifurcation plot
@@ -357,11 +335,12 @@ Default `tspan` for simulation is `( -1000., 10. )`. Maximum and minimum values 
 * `S0 = .7`: Simulation initial proportion susceptible
 * `I0 = .1`: Simulation initial proportion infectious
 """
-function bifurcationlimit(β, γ, μ, ψ, ω; 
-        maxiters = 1e5, tspan = ( -1000., 10. ), S0 = .7, I0 = .1
-    )
+function bifurcationlimit(
+    β, γ, μ, ψ, ω; 
+    maxiters=1e5, tspan=( -1000.0, 10.0 ), S0=0.7, I0=0.1
+)
     p = SirnsParameters(β, γ, μ, ψ, ω)
-    u0 = sirns_u0(S0, I0; p, equalrs = true)
+    u0 = sirns_u0(S0, I0; p, equalrs=true)
     sol = run_sirns(u0, p, tspan; maxiters)
     I = modelcompartments(sol, 2)
     mn = minimum(I)
@@ -389,6 +368,6 @@ function pl_bifurcationlimits(config)
         @unpack R0, γ, μ, psis, ω = config
         maxiters = 1e5 
     end
-    minmax = bifurcationlimits(R0, γ, μ, psis, ω; maxiters) # returns an ntuple
+    minmax = bifurcationlimits(R0, γ, μ, psis, ω; maxiters)  # returns an ntuple
     return ntuple2dict(minmax)
 end

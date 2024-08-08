@@ -51,3 +51,20 @@ function SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω)
     βreduction2 = 1.0
     return SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, βreduction1, βreduction2) 
 end
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Imported functions for structs
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function ==(a::SirrrsParameters, b::SirrrsParameters)
+    return a.τ == b.τ && a.c == b.c && a.γ == b.γ && a.ν == b.ν && a.μ == b.μ && a.ψ == b.ψ && a.ω == b.ω 
+end
+
+function hash(a::SirrrsParameters)
+    x = hash(a.τ)
+    for i ∈ [ :c, :γ, :ν, :μ, :ψ, :ω ]
+        x = hash(getproperty(a, i), x)
+    end
+    return x
+end

@@ -12,7 +12,7 @@ export JULIA_NUM_THREADS=20
 module load Julia/1.8.5-linux-x86_64
 
 n_rounds=10
-chainid=2
+chainid=4
 
 julia scripts/rsvanalysis.jl "$chainid" "$n_rounds"
 

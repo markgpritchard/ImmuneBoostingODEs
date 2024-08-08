@@ -5,6 +5,7 @@ using CairoMakie, CSV, DataFrames, DifferentialEquations, DrWatson, FFTW, StatsB
 using LinearAlgebra: eigen
 using Memoization: @memoize
 using Roots: ZeroProblem
+import Base: ==, hash
 
 include("structs.jl")
 include("consts.jl")
