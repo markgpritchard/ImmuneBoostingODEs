@@ -1,12 +1,12 @@
 #! /bin/bash
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=24
+#SBATCH --ntasks-per-node=48
 #SBATCH --time=12:00:00
 #SBATCH --partition=short
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=mark.pritchard@ndm.ox.ac.uk
 
-export JULIA_NUM_THREADS=6
+export JULIA_NUM_THREADS=12
 module load Julia/1.8.5-linux-x86_64
 
 omega=4

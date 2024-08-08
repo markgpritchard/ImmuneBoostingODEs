@@ -52,11 +52,6 @@ let
     end 
     insertcols!(data, :AprilCumulativeCases => cumulativecases)
 end 
-println("In the 12 months from 1 April each year")
-for y ∈ 2016:2022 
-    inds = findall(x -> y <= x < y + 1, data.AprilYear)
-    println("    $(sum(data.Cases[inds])) cases in $y")
-end 
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -92,7 +87,7 @@ end
     incidence, prob, cbs, saveat;
     betazeroprior=truncated(Exponential(100), 0, 4870),  # truncated at R0 = 100
     betaoneprior=Uniform(0, 0.9),
-    phiprior=Uniform(0, 2π),
+    phiprior=Uniform(-π, π),
     psiprior=truncated(Exponential(1), 0, 1000),
     betareduction1prior=Beta(4, 1),
     betareduction2prior=Beta(9, 1),
@@ -157,7 +152,7 @@ end
 fitted_pt = pigeons( ;
     target=fitmodel_target(; omega), 
     n_rounds=0,
-    n_chains=6,
+    n_chains=10,
     multithreaded=true,
     record=[ traces; record_default() ],
     seed=id,
