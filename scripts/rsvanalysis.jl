@@ -3,8 +3,6 @@ using DrWatson
 @quickactivate :ImmuneBoostingODEs
 using DataFrames, DifferentialEquations, Pigeons, Random, Turing
 
-#using CairoMakie
-
 testrun = true 
 
 if length(ARGS) == 3 
@@ -113,6 +111,8 @@ new_pt = fitted_pt
 
 for i ∈ 1:n_rounds
     filename = "rsvparameters_omega_$(omega)_id_$(id)_nrounds_$(i).jld2"
+    nextfilename = "rsvparameters_omega_$(omega)_id_$(id)_nrounds_$(i + 1).jld2"
+    isfile(datadir("sims", nextfilename)) && continue
     if isfile(datadir("sims", filename))
         global new_pt = load(datadir("sims", filename))["pt"]
     else
