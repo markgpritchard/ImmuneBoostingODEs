@@ -31,13 +31,15 @@ export
     casespertimeblock, modelcompartments, pl_modelincidence, reducetransmission!, 
     restoretransmission!, run_sirns, sirns!, sirns_u0, 
     # analysedata.jl
-    fourierhmdata, memosolver,
+    fittedsimulationquantiles, fittedsimulationsetup, fourierhmdata, loadrsvdata, 
+    memosolver, runfittedsimulations, 
     # equilibriumsurface.jl
     labelequilibriumsurface!, plotequilibriumsurface!,
     # plotting.jl
     modelflowchart!, plotchains, plotequilibrium!, plotequilibriuma!, plotequilibriumb!, 
-    plotequilibriumc!,plotequilibriumproportions!, plotfourier!, plotimmuneduration!, 
-    plotnpi!, plotrsvage!, plotrsvsim!, plotsi!, plotstringency!,
+    plotequilibriumc!,plotequilibriumproportions!, plotfittedsimulationquantiles!, 
+    plotfourier!, plotimmuneduration!, plotnpi!, plotrsvage!, plotrsvsim!, plotsi!, 
+    plotstringency!,
     # plotformating.jl 
     formataxis!, labelplots!, setvalue!
  

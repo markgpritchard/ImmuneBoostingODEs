@@ -25,63 +25,13 @@ end
 # Load the data 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# RSV data from Scotland
-data = processrsvdata("respiratory_scot.csv", "rsv.csv")
-
-# Data from Oxford Covid-19 Government Response Tracker
-crgtdata = processcrgtvdata("OxCGRT_compact_subnational_v1.csv", "crgt.csv")
-
-# To avoid splitting outbreaks, count cases from April each year 
-let 
-    april1value = MONTHDAYS[4] / 365
-    offsetdate = data.Date .- april1value
-    aprilyear = round.(Int, offsetdate, RoundDown)
-    aprilfractiondate = offsetdate - aprilyear
-    insertcols!(data, :AprilYear => aprilyear)
-    insertcols!(data, :AprilFractionDate => aprilfractiondate)
-    # insert cumulative cases since last April 
-    cumulativecases = Vector{Float64}(undef, size(data, 1))
-    cumulativecases[1] = data.Cases[1]
-    for i ∈ axes(data, 1)
-        i == 1 && continue
-        if data.AprilYear[i] == data.AprilYear[i-1]
-            cumulativecases[i] = data.Cases[i] + cumulativecases[i-1]
-        else 
-            cumulativecases[i] = data.Cases[i]
-        end 
-    end 
-    insertcols!(data, :AprilCumulativeCases => cumulativecases)
-end 
-
+include("rsvsetup.jl")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Fitting parameters 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-saveat = let 
-    savefirst = data.Date[1] - 7 / 365  # to allow calculation of new cases in first week
-    [ [ savefirst ]; data.Date ]
-end
-
-## Callbacks  
-cbs = let 
-    # When is the infection parameter expected to change?
-    # Find dates (as fractions of year) when Strigency Index goes above then below 50
-    inds = findall(x -> x >= 50, crgtdata.StringencyIndex_Average)
-    reduceday = crgtdata.Date[inds[1]]
-    increaseday = crgtdata.Date[last(inds)]
-    save_positions = ( false, false )
-    resetcb = PresetTimeCallback(reduceday + 1e-9, reducetransmission!; save_positions)
-    rescb = PresetTimeCallback(increaseday, restoretransmission!; save_positions)
-    CallbackSet(resetcb, rescb)
-end
-
-prob = let 
-    p = SirnsParameters(50.0, 0.1, 0.0, 48.7, 0.0087, 0.0, 2.0, 50.0, 50.0, 50.0) 
-    u0 = sirns_u0(0.01, 2e-5; p, equalrs=true, t0=1996.737)
-    tspan = ( 1996.737, last(saveat) )
-    ODEProblem(sirns!, u0, tspan, p)
-end
+prob = fittedsimulationsetup(saveat)
 
 @model function fitmodel(
     incidence, prob, cbs, saveat;

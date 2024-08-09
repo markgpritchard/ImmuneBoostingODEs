@@ -577,3 +577,17 @@ function _processplotchains(data; logdensity="log_density")
     plotnames_ind = [ lp_ind; _plotnames_ind ]
     return @ntuple colnames plotnames_ind
 end
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Plot simulations using MCMC values
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function plotfittedsimulationquantiles!(ax, data, plotvals, saveat)
+    scatter!(ax, saveat[2:end], data.Cases; color=:black, markersize=5)
+    lines!(ax, saveat[2:end], [ y[2] for y ∈ plotvals ]; color=COLOUR_I)
+    band!(
+        ax, saveat[2:end], [ y[1] for y ∈ plotvals ], [ y[3] for y ∈ plotvals ]; 
+        color=( COLOUR_I, 0.5 )
+    )
+end
