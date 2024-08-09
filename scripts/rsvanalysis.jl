@@ -110,7 +110,7 @@ end
 
     sol = memosolver(
         prob, Vern9(; lazy=false); 
-        p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=1e7, verbose=false,
+        p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=1e8, verbose=false,
     )
     if sol.retcode != :Success
         #@info "Adding logprob -Inf when p=$p, detection=$detection"
