@@ -141,7 +141,7 @@ fittedparametersfig = let
             setvalue!(ax, 1, 0)
         end
     end
-    Label(gb[1, 0], "Log probability"; fontsize = 11.84, rotation = π/2, tellheight = false)
+    Label(gb[1, 0], "Log likelihood"; fontsize = 11.84, rotation = π/2, tellheight = false)
     Label(gb[2, 0], "R₀"; fontsize = 11.84, rotation = π/2, tellheight = false)
     Label(gb[3, 0], "Magnitude of seasonal forcing"; fontsize = 11.84, rotation = π/2, tellheight = false)
     Label(gb[4, 0], "Magnitude of natural\nimmune boosting, ψ"; fontsize = 11.84, rotation = π/2, tellheight = false)
