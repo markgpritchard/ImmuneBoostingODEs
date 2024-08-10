@@ -59,7 +59,7 @@ end
 memosolver(prob; kwargs...) = @memoize solve(prob; kwargs...)
 memosolver(prob, alg; kwargs...) = @memoize solve(prob, alg; kwargs...)
 
-function loadrsvdata(omega; maxrounds=12)
+function loadrsvdata(omega; ids=1:4, maxrounds=12,)
     df = DataFrame(
         :iteration => Int[ ],
         :chain => Int[ ],
@@ -72,7 +72,7 @@ function loadrsvdata(omega; maxrounds=12)
         :detection => Float64[ ],
         :log_density => Float64[ ],
     )
-    for i ∈ 1:4 
+    for i ∈ ids
         _loaded = false 
         j = maxrounds
         while !_loaded && j >= 1

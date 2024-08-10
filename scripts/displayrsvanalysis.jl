@@ -21,7 +21,7 @@ end
 # Load results 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-rsvparameters01 = loadrsvdata(0.1)
+rsvparameters01 = loadrsvdata(0.1; ids=[ 1, 2, 3, 5 ])  # `id==4` led to repeated errors
 plotchains(rsvparameters01)
 plotvals01 = fittedsimulationquantiles(rsvparameters01, 0.1, saveat, cbs)
 
@@ -53,76 +53,97 @@ fittedparametersfig = let
     plotvvector = [ 
         plotvals01, plotvals02, plotvals04, plotvals1, plotvals2, plotvals4, plotvals10 
     ]
-    parametervector = [ 
+    pv = [  # parametervector
         rsvparameters01, rsvparameters02, rsvparameters04, 
-        rsvparameters1,rsvparameters2, rsvparameters4, rsvparameters10 
+        rsvparameters1, rsvparameters2, rsvparameters4, rsvparameters10 
     ]
+    γ = 48.7
+    μ = 0.0087
     logomegavalues = log.([ 0.1, 0.2, 0.4, 1.0, 2.0, 4.0, 10.0 ])
     omegalabels = [ "0.1", "0.2", "0.4", "1.0", "2.0", "4.0", "10.0" ]
     
     fig = Figure(; size=( 800, 1200 ))
     ga = GridLayout(fig[1, 1])
-    axs = [ Axis(ga[i, 1]) for i ∈ 1:7]
+    axs = [ Axis(ga[i, 1]) for i ∈ 1:7 ]
     for (i, v) ∈ enumerate(plotvvector)
         plotfittedsimulationquantiles!(axs[i], data, v, saveat)
-        text!(axs[i], 2016.8, 550; text="ω=$(omegalabels[i])", fontsize = 11.84)
+        text!(axs[i], 2016.8, 550; text="ω=$(omegalabels[i])", fontsize=11.84)
     end
     gb = GridLayout(fig[1, 2])
     ax1 = Axis(gb[1, 1]; xticks=( logomegavalues, omegalabels ))
-    scatter!(ax1, logomegavalues, [ quantile(v.log_density, 0.5) for v ∈ parametervector ]; color=:blue)
+    scatter!(
+        ax1, logomegavalues, [ quantile(v.log_density, 0.5) for v ∈ pv ]; 
+        color=:blue
+    )
     rangebars!(
         ax1, 
         logomegavalues, 
-        [ quantile(v.log_density, 0.05) for v ∈ parametervector ], 
-        [ quantile(v.log_density, 0.95) for v ∈ parametervector ];
+        [ quantile(v.log_density, 0.05) for v ∈ pv ], 
+        [ quantile(v.log_density, 0.95) for v ∈ pv ];
         color=:blue,
     )
     ax2 = Axis(gb[2, 1]; xticks=( logomegavalues, omegalabels ))
     scatter!(
-        ax2, logomegavalues, [ quantile(v.β0, 0.5) for v ∈ parametervector ] ./ (48.7 + 0.0087); 
+        ax2, 
+        logomegavalues, 
+        [ quantile(v.β0, 0.5) for v ∈ pv ] ./ (γ + μ); 
         color=:blue
     )
     rangebars!(
         ax2, 
         logomegavalues, 
-        [ quantile(v.β0, 0.05) for v ∈ parametervector ] ./ (48.7 + 0.0087), 
-        [ quantile(v.β0, 0.95) for v ∈ parametervector ] ./ (48.7 + 0.0087);
+        [ quantile(v.β0, 0.05) for v ∈ pv ] ./ (γ + μ), 
+        [ quantile(v.β0, 0.95) for v ∈ pv ] ./ (γ + μ);
         color=:blue,
     )
     ax3 = Axis(gb[3, 1]; xticks=( logomegavalues, omegalabels ))
-    scatter!(ax3, logomegavalues, [ quantile(v.β1, 0.5) for v ∈ parametervector ]; color=:blue)
+    scatter!(
+        ax3, 
+        logomegavalues, 
+        [ quantile(v.β1, 0.5) for v ∈ pv ] .* [ quantile(v.β0, 0.5) for v ∈ pv ] ./ (γ + μ); 
+        color=:blue
+    )
     rangebars!(
         ax3, 
         logomegavalues, 
-        [ quantile(v.β1, 0.05) for v ∈ parametervector ], 
-        [ quantile(v.β1, 0.95) for v ∈ parametervector ];
+        [ quantile(v.β1, 0.05) for v ∈ pv ] .* [ quantile(v.β0, 0.05) for v ∈ pv ] ./ (γ + μ), 
+        [ quantile(v.β1, 0.95) for v ∈ pv ] .* [ quantile(v.β0, 0.95) for v ∈ pv ] ./ (γ + μ);
         color=:blue,
     )
     ax4 = Axis(gb[4, 1]; xticks=( logomegavalues, omegalabels ))
-    scatter!(ax4, logomegavalues, [ quantile(v.ψ, 0.5) for v ∈ parametervector ]; color=:blue)
+    scatter!(
+        ax4, logomegavalues, [ quantile(v.ψ, 0.5) for v ∈ pv ]; 
+        color=:blue
+    )
     rangebars!(
         ax4, 
         logomegavalues, 
-        [ quantile(v.ψ, 0.05) for v ∈ parametervector ], 
-        [ quantile(v.ψ, 0.95) for v ∈ parametervector ];
+        [ quantile(v.ψ, 0.05) for v ∈ pv ], 
+        [ quantile(v.ψ, 0.95) for v ∈ pv ];
         color=:blue,
     )
     ax5 = Axis(gb[5, 1]; xticks=( logomegavalues, omegalabels ))
-    scatter!(ax5, logomegavalues, 1 .- [ quantile(v.βreduction1, 0.5) for v ∈ parametervector ]; color=:blue)
+    scatter!(
+        ax5, logomegavalues, 1 .- [ quantile(v.βreduction1, 0.5) for v ∈ pv ]; 
+        color=:blue
+    )
     rangebars!(
         ax5, 
         logomegavalues, 
-        1 .- [ quantile(v.βreduction1, 0.05) for v ∈ parametervector ], 
-        1 .- [ quantile(v.βreduction1, 0.95) for v ∈ parametervector ];
+        1 .- [ quantile(v.βreduction1, 0.05) for v ∈ pv ], 
+        1 .- [ quantile(v.βreduction1, 0.95) for v ∈ pv ];
         color=:blue,
     )
     ax6 = Axis(gb[6, 1]; xticks=( logomegavalues, omegalabels ))
-    scatter!(ax6, logomegavalues, [ quantile(v.detection, 0.5) for v ∈ parametervector ]; color=:blue)
+    scatter!(
+        ax6, logomegavalues, [ quantile(v.detection, 0.5) for v ∈ pv ]; 
+        color=:blue
+    )
     rangebars!(
         ax6, 
         logomegavalues, 
-        [ quantile(v.detection, 0.05) for v ∈ parametervector ], 
-        [ quantile(v.detection, 0.95) for v ∈ parametervector ];
+        [ quantile(v.detection, 0.05) for v ∈ pv ], 
+        [ quantile(v.detection, 0.95) for v ∈ pv ];
         color=:blue,
     )
     linkaxes!(axs...)
@@ -130,8 +151,8 @@ fittedparametersfig = let
         formataxis!(axs[i], hidex=(i != 7), hidexticks=(i != 7))
         if i != 7 hidespines!(axs[i], :b) end
     end
-    Label(ga[1:7, 0], "Weekly incidence"; fontsize = 11.84, rotation = π/2, tellheight = false)
-    Label(ga[8, 1], "Year"; fontsize = 11.84, tellwidth = false)
+    Label(ga[1:7, 0], "Weekly incidence"; fontsize=11.84, rotation=π/2, tellheight=false)
+    Label(ga[8, 1], "Year"; fontsize=11.84, tellwidth=false)
     colgap!(ga, 1, 5)
     rowgap!(ga, 7, 5)
     for (i, ax) ∈ enumerate([ ax1, ax2, ax3, ax4, ax5, ax6 ])
@@ -141,16 +162,24 @@ fittedparametersfig = let
             setvalue!(ax, 1, 0)
         end
     end
-    Label(gb[1, 0], "Log likelihood"; fontsize = 11.84, rotation = π/2, tellheight = false)
-    Label(gb[2, 0], "R₀"; fontsize = 11.84, rotation = π/2, tellheight = false)
-    Label(gb[3, 0], "Magnitude of seasonal forcing"; fontsize = 11.84, rotation = π/2, tellheight = false)
-    Label(gb[4, 0], "Magnitude of natural\nimmune boosting, ψ"; fontsize = 11.84, rotation = π/2, tellheight = false)
-    Label(gb[5, 0], "Transmission reduction from\nnon-pharmaceutical interventions"; fontsize = 11.84, rotation = π/2, tellheight = false)
-    Label(gb[6, 0], "Proportion detected"; fontsize = 11.84, rotation = π/2, tellheight = false)
-    Label(gb[7, 1], "Waning rate, ω"; fontsize = 11.84, tellwidth = false)
+    Label(gb[1, 0], "Log likelihood"; fontsize=11.84, rotation=π/2, tellheight=false)
+    Label(gb[2, 0], "R₀"; fontsize=11.84, rotation=π/2, tellheight=false)
+    Label(
+        gb[3, 0], "Magnitude of seasonal forcing"; 
+        fontsize=11.84, rotation=π/2, tellheight=false
+    )
+    Label(
+        gb[4, 0], "Magnitude of natural\nimmune boosting, ψ"; 
+        fontsize=11.84, rotation=π/2, tellheight=false
+    )
+    Label(
+        gb[5, 0], "Transmission reduction from\nnon-pharmaceutical interventions"; 
+        fontsize=11.84, rotation=π/2, tellheight=false
+    )
+    Label(gb[6, 0], "Proportion diagnosed"; fontsize=11.84, rotation=π/2, tellheight=false)
+    Label(gb[7, 1], "Waning rate, ω"; fontsize=11.84, tellwidth=false)
     colgap!(gb, 1, 5)
     rowgap!(gb, 6, 5)
 
     fig
 end
-
