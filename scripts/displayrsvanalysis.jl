@@ -21,7 +21,7 @@ end
 # Load results 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-rsvparameters01 = loadrsvdata(0.1; ids=1:5)  # `id==4` led to repeated errors
+rsvparameters01 = loadrsvdata(0.1; ids=1:5) 
 plotchains(rsvparameters01)
 plotvals01 = fittedsimulationquantiles(rsvparameters01, 0.1, saveat, cbs)
 
