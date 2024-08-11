@@ -40,7 +40,7 @@ prob = fittedsimulationsetup(saveat)
     betareduction1prior=Beta(4, 1),
     betareduction2prior=Beta(9, 1),
     omega=2.0,
-    detection=0.02,
+    detectionprior=Beta(1, 98)
 )
     β0 ~ betazeroprior
     β1 ~ betaoneprior
@@ -51,6 +51,7 @@ prob = fittedsimulationsetup(saveat)
     ω = omega
     βreduction1 ~ betareduction1prior
     βreduction2 ~ betareduction2prior
+    detection ~ detectionprior
 
     p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, β0, βreduction1 * β0, βreduction2 * β0)
     u0 = sirns_u0(0.01, 2e-5; p, equalrs=true, t0=1996.737)  # 10 years before data collection
