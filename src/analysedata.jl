@@ -69,7 +69,6 @@ function loadrsvdata(omega; ids=1:4, maxrounds=12,)
         :ψ => Float64[ ],
         :βreduction1 => Float64[ ],
         :βreduction2 => Float64[ ],
-        :detection => Float64[ ],
         :log_density => Float64[ ],
     )
     for i ∈ ids
@@ -96,7 +95,7 @@ function fittedsimulationsetup(saveat)
     ODEProblem(sirns!, u0, tspan, p)
 end
 
-function runfittedsimulations(df, omega, saveat, cbs)
+function runfittedsimulations(df, omega, saveat, cbs; detection=0.02)
     modelmat = Matrix{Float64}(undef, length(saveat) - 1, size(df, 1))
     prob = fittedsimulationsetup(saveat)
     for i ∈ axes(df, 1)
@@ -118,7 +117,7 @@ function runfittedsimulations(df, omega, saveat, cbs)
             p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=1e8, 
         )
         cumulativecases = modelcompartments(sol, :cc)
-        modelmat[:, i] = casespertimeblock(cumulativecases) .* 5_450_000 .* df.detection[i]
+        modelmat[:, i] = casespertimeblock(cumulativecases) .* 5_450_000 .* detection
     end
     return modelmat
 end

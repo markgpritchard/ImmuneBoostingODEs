@@ -21,7 +21,7 @@ end
 # Load results 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-rsvparameters01 = loadrsvdata(0.1; ids=1:5)  # `id==4` led to repeated errors
+rsvparameters01 = loadrsvdata(0.1; ids=1:5)
 plotchains(rsvparameters01)
 plotvals01 = fittedsimulationquantiles(rsvparameters01, 0.1, saveat, cbs)
 
@@ -134,6 +134,7 @@ fittedparametersfig = let
         1 .- [ quantile(v.βreduction1, 0.95) for v ∈ pv ];
         color=:blue,
     )
+    #=
     ax6 = Axis(gb[6, 1]; xticks=( logomegavalues, omegalabels ))
     scatter!(
         ax6, logomegavalues, [ quantile(v.detection, 0.5) for v ∈ pv ] .* 100; 
@@ -146,6 +147,7 @@ fittedparametersfig = let
         [ quantile(v.detection, 0.95) for v ∈ pv ] .* 100;
         color=:blue,
     )
+    =#
     linkaxes!(axs...)
     for i ∈ 1:7 
         formataxis!(axs[i], hidex=(i != 7), hidexticks=(i != 7))
@@ -155,9 +157,9 @@ fittedparametersfig = let
     Label(ga[8, 1], "Year"; fontsize=11.84, tellwidth=false)
     colgap!(ga, 1, 5)
     rowgap!(ga, 7, 5)
-    for (i, ax) ∈ enumerate([ ax1, ax2, ax3, ax4, ax5, ax6 ])
-        formataxis!(ax, hidex=(i != 6), hidexticks=(i != 6))
-        if i != 6 hidespines!(ax, :b) end
+    for (i, ax) ∈ enumerate([ ax1, ax2, ax3, ax4, ax5 ])
+        formataxis!(ax, hidex=(i != 5), hidexticks=(i != 5))
+        if i != 5 hidespines!(ax, :b) end
         if i >= 2
             setvalue!(ax, 1, 0)
         end
@@ -176,10 +178,10 @@ fittedparametersfig = let
         gb[5, 0], "Transmission reduction from\nnon-pharmaceutical interventions"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
-    Label(gb[6, 0], "Proportion diagnosed, %"; fontsize=11.84, rotation=π/2, tellheight=false)
-    Label(gb[7, 1], "Waning rate, ω"; fontsize=11.84, tellwidth=false)
+    #Label(gb[6, 0], "Proportion diagnosed, %"; fontsize=11.84, rotation=π/2, tellheight=false)
+    Label(gb[6, 1], "Waning rate, ω"; fontsize=11.84, tellwidth=false)
     colgap!(gb, 1, 5)
-    rowgap!(gb, 6, 5)
+    rowgap!(gb, 5, 5)
 
     fig
 end

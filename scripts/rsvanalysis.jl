@@ -93,7 +93,6 @@ function Pigeons.initialization(target::FitmodelType, rng::AbstractRNG, ::Int64)
     Pigeons.update_state!(result, :ψ, 1, 0.0)
     Pigeons.update_state!(result, :βreduction1, 1, 0.9)
     Pigeons.update_state!(result, :βreduction1, 1, 1.0)
-    Pigeons.update_state!(result, :detection, 1, 0.02)
 
     return result
 end
