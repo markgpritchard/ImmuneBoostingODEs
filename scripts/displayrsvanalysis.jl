@@ -21,31 +21,31 @@ end
 # Load results 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-rsvparameters01 = loadrsvdata(0.1; ids=[ 1, 2, 3, 5 ])  # `id==4` led to repeated errors
+rsvparameters01 = loadrsvdata(0.1; ids=1:5)  # `id==4` led to repeated errors
 plotchains(rsvparameters01)
 plotvals01 = fittedsimulationquantiles(rsvparameters01, 0.1, saveat, cbs)
 
-rsvparameters02 = loadrsvdata(0.2)
+rsvparameters02 = loadrsvdata(0.2; ids=1:5)
 plotchains(rsvparameters02)
 plotvals02 = fittedsimulationquantiles(rsvparameters02, 0.2, saveat, cbs)
 
-rsvparameters04 = loadrsvdata(0.4)
+rsvparameters04 = loadrsvdata(0.4; ids=1:5)
 plotchains(rsvparameters04)
 plotvals04 = fittedsimulationquantiles(rsvparameters04, 0.4, saveat, cbs)
 
-rsvparameters1 = loadrsvdata(1.0)
+rsvparameters1 = loadrsvdata(1.0; ids=1:5)
 plotchains(rsvparameters1)
 plotvals1 = fittedsimulationquantiles(rsvparameters1, 1.0, saveat, cbs)
 
-rsvparameters2 = loadrsvdata(2.0)
+rsvparameters2 = loadrsvdata(2.0; ids=1:5)
 plotchains(rsvparameters2)
 plotvals2 = fittedsimulationquantiles(rsvparameters2, 2.0, saveat, cbs)
 
-rsvparameters4 = loadrsvdata(4.0)
+rsvparameters4 = loadrsvdata(4.0; ids=1:5)
 plotchains(rsvparameters4)
 plotvals4 = fittedsimulationquantiles(rsvparameters4, 4.0, saveat, cbs)
 
-rsvparameters10 = loadrsvdata(10.0)
+rsvparameters10 = loadrsvdata(10.0; ids=1:5)
 plotchains(rsvparameters10)
 plotvals10 = fittedsimulationquantiles(rsvparameters10, 10.0, saveat, cbs)
 
@@ -136,14 +136,14 @@ fittedparametersfig = let
     )
     ax6 = Axis(gb[6, 1]; xticks=( logomegavalues, omegalabels ))
     scatter!(
-        ax6, logomegavalues, [ quantile(v.detection, 0.5) for v ∈ pv ]; 
+        ax6, logomegavalues, [ quantile(v.detection, 0.5) for v ∈ pv ] .* 100; 
         color=:blue
     )
     rangebars!(
         ax6, 
         logomegavalues, 
-        [ quantile(v.detection, 0.05) for v ∈ pv ], 
-        [ quantile(v.detection, 0.95) for v ∈ pv ];
+        [ quantile(v.detection, 0.05) for v ∈ pv ] .* 100, 
+        [ quantile(v.detection, 0.95) for v ∈ pv ] .* 100;
         color=:blue,
     )
     linkaxes!(axs...)
@@ -176,7 +176,7 @@ fittedparametersfig = let
         gb[5, 0], "Transmission reduction from\nnon-pharmaceutical interventions"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
-    Label(gb[6, 0], "Proportion diagnosed"; fontsize=11.84, rotation=π/2, tellheight=false)
+    Label(gb[6, 0], "Proportion diagnosed, %"; fontsize=11.84, rotation=π/2, tellheight=false)
     Label(gb[7, 1], "Waning rate, ω"; fontsize=11.84, tellwidth=false)
     colgap!(gb, 1, 5)
     rowgap!(gb, 6, 5)

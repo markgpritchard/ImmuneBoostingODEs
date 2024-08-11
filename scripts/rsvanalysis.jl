@@ -58,7 +58,8 @@ prob = fittedsimulationsetup(saveat)
 
     sol = memosolver(
         prob, Vern9(; lazy=false); 
-        p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=1e8, verbose=false,
+        p, u0, callback=cbs, saveat, save_idxs=[ 8 ], 
+        abstol=1e-15, maxiters=1e8, verbose=false,
     )
     if sol.retcode != :Success
         #@info "Adding logprob -Inf when p=$p, detection=$detection"
@@ -66,7 +67,8 @@ prob = fittedsimulationsetup(saveat)
         return nothing
     end
 
-    cumulativecases = modelcompartments(sol, :cc)
+    #cumulativecases = modelcompartments(sol, :cc)
+    cumulativecases = modelcompartments(sol, 1)
     incidentcases = casespertimeblock(cumulativecases) .* 5_450_000 .* detection
 
     for i ∈ eachindex(incidentcases)
@@ -103,7 +105,7 @@ fitted_pt = pigeons( ;
     n_chains=10,
     multithreaded=true,
     record=[ traces; record_default() ],
-    seed=id,
+    seed=(id * 1000 + round(Int, omega * 10)),
     variational=GaussianReference(),
 )
 

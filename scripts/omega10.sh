@@ -12,7 +12,7 @@ module load Julia/1.8.5-linux-x86_64
 omega=10.0
 n_rounds=12
 
-for n in {1..4}
+for n in {1..5}
 do
 	julia scripts/rsvanalysis.jl "$omega" "$n" "$n_rounds" &
 done

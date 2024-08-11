@@ -9,10 +9,10 @@
 export JULIA_NUM_THREADS=24
 module load Julia/1.8.5-linux-x86_64
 
-omega=2
+omega=0.1
 n_rounds=8
 
-for n in {1..4}
+for n in {1..5}
 do
 	julia scripts/rsvanalysis.jl "$omega" "$n" "$n_rounds" &
 done

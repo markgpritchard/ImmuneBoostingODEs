@@ -21,14 +21,22 @@ The function `sirns_u0` can be used to produce an appropriate vector for `u`. No
 """
 function sirns!(du, u, p, t)
     # Hard-coded to run with 3 resistant subcompartments 
-    S, I, R1, R2, R3, x1, x2, cc = u 
+    S, I, R1, R2, R3, x1, x2, = u 
     #@assert minimum(u[1:5]) >= 0
 
     # transmission parameter
     β = p.β0 * (1 + p.β1 * x1) # more efficient version than cos(2π(t-ϕ))
-    @assert β >= 0 "β<0 when p=$p, x1=$x1"
+    #@assert β >= 0 "β<0 when p=$p, x1=$x1"
     λ = β * I
-    _sirns!(du, u, p, t, λ)
+    
+    du[1] = 3 * p.ω * R3 - λ * S + p.μ * (1 - S)                    # S
+    du[2] = λ * S - (p.γ + p.μ) * I                                 # I
+    du[3] = p.γ * I + λ * p.ψ * (R2 + R3) - (3 * p.ω + p.μ) * R1    # R1
+    du[4] = 3 * p.ω * R1 - (3 * p.ω + λ * p.ψ + p.μ) * R2           # R2
+    du[5] = 3 * p.ω * R2 - (3 * p.ω + λ * p.ψ + p.μ) * R3           # R3
+    du[6] = -2π * x2                                                # x1
+    du[7] = 2π * x1                                                 # x2
+    du[8] = λ * S                                                   # cumulative cases 
 end 
 
 function _sirns!(du, u, p, t, λ)
