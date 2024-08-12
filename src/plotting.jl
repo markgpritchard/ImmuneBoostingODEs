@@ -10,46 +10,55 @@ function modelflowchart!(fig)
     ax = Axis(ga[1, 1]) # axis that figure will be plotted on
 
     for i ∈ 1:5
-        color = ( [ COLOUR_S, COLOUR_I, COLOUR_R, COLOUR_R, COLOUR_R ][i], .2 )
+        color = ( [ COLOUR_S, COLOUR_I, COLOUR_R, COLOUR_R, COLOUR_R ][i], 0.2 )
         label = [ "S", "I", "R₁", "R₂", "R₃" ][i]
         # generate coloured boxes for each compartment
-        poly!(ax, Rect(i - .25, -.25, .5, .5); color)
+        poly!(ax, Rect(i - 0.25, -0.25, 0.5, 0.5); color)
         # label each box
-        text!(ax, i, 0; text = label, align = ( :center, :center ))
+        text!(ax, i, 0; text=label, align=( :center, :center ))
     end 
     # arrows between boxes
-    for x ∈ 2:4 arrows!(ax, [ x + .28 ], [ 0 ], [ .4 ], [ 0 ]; color = :black) end
-    arrows!(ax, [ .52 ], [ .52 ], [ .2 ], [ -.2 ]; color = :black)
-    for x ∈ 1:5 arrows!(ax, [ x + .28 ], [ -.28 ], [ .2 ], [ -.2 ]; color = :black) end
+    for x ∈ 2:4 arrows!(ax, [ x + 0.28 ], [ 0 ], [ 0.4 ], [ 0 ]; color=:black) end
+    arrows!(ax, [ 0.52 ], [ 0.52 ], [ 0.2 ], [ -0.2 ]; color=:black)
+    for x ∈ 1:5 arrows!(ax, [ x + 0.28 ], [ -0.28 ], [ 0.2 ], [ -0.2 ]; color=:black) end
     # dashed lines
-    xs1 = collect(1.28:.05:1.63); ys1 = zeros(length(xs1))
-    linesegments!(ax, xs1, ys1; color = :red)
-    arrows!(ax, [ 1.63 ], [ 0 ], [ .05 ], [ 0 ]; color = :red)
-    xs2 = collect(4:-.05:3.05); ys2 = @. .52 - (xs2 - 3.5)^2
-    linesegments!(ax, xs2, ys2; color = :red)
-    xs3 = collect(5:-.05:3.05); ys3 = @. .57 - .3 * (xs3 - 4)^2
-    linesegments!(ax, xs3, ys3; color = :red)
-    arrows!(ax, [ 3.05 ], [ .2975 ], [ -.05 ], [ -.0275 ]; color = :red)
-    lines!(ax, [ 5, 5 ], [ -.28, -.93 ]; color = :black)
-    lines!(ax, [ 1, 5 ], [ -.93, -.93 ]; color = :black)
-    arrows!(ax, [ 1 ], [ -.93 ], [ 0 ], [ .58 ]; color = :black)
+    xs1 = collect(1.28:0.05:1.63)
+    ys1 = zeros(length(xs1))
+    linesegments!(ax, xs1, ys1; color=:red)
+    arrows!(ax, [ 1.63 ], [ 0 ], [ 0.05 ], [ 0 ]; color=:red)
+    xs2 = collect(4:-0.05:3.05)
+    ys2 = @. 0.52 - (xs2 - 3.5)^2
+    linesegments!(ax, xs2, ys2; color=:red)
+    xs3 = collect(5:-0.05:3.05)
+    ys3 = @. 0.57 - 0.3 * (xs3 - 4)^2
+    linesegments!(ax, xs3, ys3; color=:red)
+    arrows!(ax, [ 3.05 ], [ 0.2975 ], [ -0.05 ], [ -0.0275 ]; color=:red)
+    lines!(ax, [ 5, 5 ], [ -0.28, -0.93 ]; color=:black)
+    lines!(ax, [ 1, 5 ], [ -0.93, -0.93 ]; color=:black)
+    arrows!(ax, [ 1 ], [ -0.93 ], [ 0 ], [ 0.58 ]; color=:black)
     # label the arrows / lines
-    text!(ax, 1.5, .1; text = "β(t) I(t)", color = :red, fontsize, align = ( :center, :bottom ))
-    text!(ax, 2.5, .1; text = "γ", color = :black, fontsize, align = ( :center, :bottom ))
+    text!(ax, 1.5, 0.1; text="β(t) I(t)", color=:red, fontsize, align=( :center, :bottom ))
+    text!(ax, 2.5, 0.1; text="γ", color=:black, fontsize, align=( :center, :bottom ))
     for x ∈ 3:4
-        text!(ax, x + .5, .1; 
-            text = "3ω", color = :black, fontsize, align = ( :center, :bottom ))
+        text!(
+            ax, x + 0.5, 0.1; 
+            text="3ω", color=:black, fontsize, align=( :center, :bottom )
+        )
     end
-    text!(ax, .72, .45; text = "μ", color = :black, fontsize, align = ( :left, :bottom ))
+    text!(ax, 0.72, 0.45; text="μ", color=:black, fontsize, align=( :left, :bottom ))
     for x ∈ 1:5
-        text!(ax, x + .48, -.35; text = "μ", color = :black, fontsize, align = ( :left, :bottom ))
+        text!(ax, x + 0.48, -0.35; text="μ", color=:black, fontsize, align=( :left, :bottom ))
     end
-    text!(ax, 3.8, .65; text = "ψ β(t) I(t)", color = :red, fontsize, align = ( :center, :bottom ))
-    text!(ax, 3, -1.03; text = "3ω", color = :black, fontsize, align = ( :center, :top ))
+    text!(ax, 3.8, 0.65; text="ψ β(t) I(t)", color=:red, fontsize, align=( :center, :bottom ))
+    text!(ax, 3, -1.03; text="3ω", color=:black, fontsize, align=( :center, :top ))
 
-    formataxis!(ax; hidex = true, hidexticks = true, hidey = true, hideyticks = true, 
-        hidespines = ( :l, :t, :r, :b ))
-    setvalue!(ax, (.5, -1.1 )); setvalue!(ax, (5.5 , .75 ))
+    formataxis!(
+        ax; 
+        hidex=true, hidexticks=true, hidey=true, hideyticks=true, 
+        hidespines=( :l, :t, :r, :b )
+    )
+    setvalue!(ax, (0.5, -1.1 ))
+    setvalue!(ax, (5.5 , 0.75 ))
 end 
 
 
@@ -242,7 +251,7 @@ function plotfourier!(fig, unforced6mfreqs, unforced400dfreqs, unforced25freqs,
 )
 gl = GridLayout(fig[1, 1])
 
-Label(gl[0, 1], "Immune duration 6 months"; fontsize = 11.84, halign = :left, tellwidth = false)
+Label(gl[0, 1], "Immune duration: 6 months"; fontsize = 11.84, halign = :left, tellwidth = false)
 Label(gl[0, 2], "1.1 years"; fontsize = 11.84, halign = :left, tellwidth = false)
 Label(gl[0, 3], "2.5 years"; fontsize = 11.84, halign = :left, tellwidth = false)
 
@@ -464,28 +473,43 @@ end
 # Susceptible--infectious planes 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-function plotsi!(fig::Figure, stablesim, unstablein12, unstableout12, unstablein5, 
-        unstableout5, limitcycle12, limitcycle5
+function plotsi!(
+    fig::Figure, stablesim, 
+    unstablein12, unstableout12, unstablein5, unstableout5, 
+    limitcycle12, limitcycle5;
+    row=1
+)
+    _plotsi!(
+        fig, stablesim, 
+        unstablein12, unstableout12, unstablein5, unstableout5, 
+        limitcycle12, limitcycle5;
+        row
     )
-    _plotsi!(fig, stablesim, unstablein12, unstableout12, unstablein5, unstableout5, 
-        limitcycle12, limitcycle5)
     colgap!(fig.layout, 1, 5) 
-    for r ∈ 1:2 rowgap!(fig.layout, r, 5) end
+    for r ∈ row:(row + 1) rowgap!(fig.layout, r, 5) end
 end
 
-function plotsi!(fig::GridLayout, stablesim, unstablein12, unstableout12, unstablein5, 
-        unstableout5, limitcycle12, limitcycle5
-    )
-    _plotsi!(fig, stablesim, unstablein12, unstableout12, unstablein5, unstableout5, 
+function plotsi!(
+    fig::GridLayout, stablesim, 
+    unstablein12, unstableout12, unstablein5, unstableout5, 
+    limitcycle12, limitcycle5; 
+    row=1
+)
+    _plotsi!(
+        fig, stablesim, 
+        unstablein12, unstableout12, unstablein5, unstableout5, 
         limitcycle12, limitcycle5)
     colgap!(fig, 1, 5) 
-    for r ∈ 1:2 rowgap!(fig, r, 5) end
+    for r ∈ row:(row + 1) rowgap!(fig, r, 5) end
 end
 
-function _plotsi!(fig, stablesim, unstablein12, unstableout12, unstablein5, 
-        unstableout5, limitcycle12, limitcycle5
-    )
-    ax1 = Axis(fig[1, 1])
+function _plotsi!(
+    fig, stablesim, 
+    unstablein12, unstableout12, unstablein5, unstableout5, 
+    limitcycle12, limitcycle5;
+    row=1
+)
+    ax1 = Axis(fig[row, 1])
     lines!(ax1, stablesim[:S], stablesim[:I]; color = COLOURVECTOR[4])
     for ℓ ∈ [ 3050, 5900 ]
         x = stablesim[:S][ℓ]
@@ -495,7 +519,7 @@ function _plotsi!(fig, stablesim, unstablein12, unstableout12, unstablein5,
         arrows!(ax1, [x], [y], [u], [v]; color = COLOURVECTOR[4])
     end
 
-    ax2 = Axis(fig[1, 2])
+    ax2 = Axis(fig[row, 2])
     lines!(ax2, limitcycle12[:S], limitcycle12[:I]; color = :black)
     for (i, r) ∈ enumerate([ unstablein12, unstableout12 ])
         lines!(ax2, r[:S], r[:I]; color = COLOURVECTOR[i+4])
@@ -507,7 +531,7 @@ function _plotsi!(fig, stablesim, unstablein12, unstableout12, unstablein5,
         arrows!(ax2, [x], [y], [u], [v]; color = COLOURVECTOR[i+4])
     end
 
-    ax3 = Axis(fig[1, 3])
+    ax3 = Axis(fig[row, 3])
     lines!(ax3, limitcycle5[:S], limitcycle5[:I]; color = :black)
     for (i, r) ∈ enumerate([ unstablein5, unstableout5 ])
         lines!(ax3, r[:S], r[:I]; color = COLOURVECTOR[i+4])
@@ -524,11 +548,11 @@ function _plotsi!(fig, stablesim, unstablein12, unstableout12, unstablein5,
     formataxis!(ax1)
     formataxis!(ax2; hidey = true, hideyticks = true, hidespines = (:l, :r, :t))
     formataxis!(ax3; hidey = true, hideyticks = true, hidespines = (:l, :r, :t))
-    Label(fig[0, 1], "ψ = 0.5"; halign = :left, fontsize = 11.84, tellwidth = false)
-    Label(fig[0, 2], "ψ = 1.5"; halign = :left, fontsize = 11.84, tellwidth = false)
-    Label(fig[0, 3], "ψ = 5"; halign = :left, fontsize = 11.84, tellwidth = false)
-    Label(fig[2, 1:3], "Proportion susceptible"; fontsize = 11.84, tellwidth = false)
-    Label(fig[1, 0], "Proportion infectious"; fontsize = 11.84, rotation = π/2, tellheight = false)
+    Label(fig[(row - 1), 1], "ψ = 0.5"; halign = :left, fontsize = 11.84, tellwidth = false)
+    Label(fig[(row - 1), 2], "ψ = 1.5"; halign = :left, fontsize = 11.84, tellwidth = false)
+    Label(fig[(row - 1), 3], "ψ = 5"; halign = :left, fontsize = 11.84, tellwidth = false)
+    Label(fig[(row + 1), 1:3], "Proportion susceptible"; fontsize = 11.84, tellwidth = false)
+    Label(fig[row, 0], "Proportion infectious"; fontsize = 11.84, rotation = π/2, tellheight = false)
 end
 
 

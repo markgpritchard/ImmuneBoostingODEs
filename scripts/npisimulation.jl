@@ -58,9 +58,9 @@ prob = let
     ω = 365.25 / 400
     β1 = .1 
     ϕ = -.25
-    ψ = 0
+    ψ = 0.0
 
-    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, 1., 1.) 
+    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, β0, β0, β0) 
     I0 = .007
     S0 = .5
     u0 = sirns_u0(S0, I0; equalrs = true, p, t0 = -1000.65)
@@ -125,7 +125,7 @@ npisim_phi13_2 = let
     R0 = 1.6
     ψ = 13.2
     immuneduration = .5
-    β1 = ϕ = 0
+    β1 = ϕ = 0.0
     β0 = R0 * (γ + μ)
     ω = 1 / immuneduration 
 

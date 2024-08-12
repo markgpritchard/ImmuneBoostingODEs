@@ -42,18 +42,23 @@ plotchains(rsvparameters04)
 filter!(:chain => x -> x ∈ [ 1, 2, 5 ], rsvparameters04)
 plotchains(rsvparameters04)
 plotvals04 = fittedsimulationquantiles(rsvparameters04, 0.4, saveat, cbs)
+βreduction1_04 = 1 .- quantile(rsvparameters04.βreduction1, [ 0.95, 0.5, 0.05 ])
+#3-element Vector{Float64}:
+# 0.42364255789478045      
+# 0.4288752645900158       
+# 0.44024896448040374  
 
 rsvparameters1 = loadrsvdata(1.0)
 plotchains(rsvparameters1)
 filter!(:chain => x -> x != 1, rsvparameters1)
 plotchains(rsvparameters1)
 plotvals1 = fittedsimulationquantiles(rsvparameters1, 1.0, saveat, cbs)
-beta1_1 = quantile(rsvparameters1.β1, [0.05, 0.5, 0.95])
+beta1_1 = quantile(rsvparameters1.β1, [ 0.05, 0.5, 0.95 ])
 #3-element Vector{Float64}:
 # 0.17539991622191103
 # 0.1778485156330903
 # 0.18209665569439593
-psi_1 = quantile(rsvparameters1.ψ, [0.05, 0.5, 0.95])
+psi_1 = quantile(rsvparameters1.ψ, [ 0.05, 0.5, 0.95 ])
 #3-element Vector{Float64}:
 # 0.00010836786619787666
 # 0.0013407470879928376
@@ -64,6 +69,11 @@ plotchains(rsvparameters2)
 filter!(:chain => x -> x != 4, rsvparameters2)
 plotchains(rsvparameters2)
 plotvals2 = fittedsimulationquantiles(rsvparameters2, 2.0, saveat, cbs)
+βreduction1_2 = 1 .- quantile(rsvparameters2.βreduction1, [ 0.95, 0.5, 0.05 ])
+#3-element Vector{Float64}:
+# 0.25571515469505746
+# 0.26337343069493213
+# 0.28768665501096025
 
 rsvparameters4 = loadrsvdata(4.0)
 plotchains(rsvparameters4)
