@@ -37,9 +37,9 @@ export
     labelequilibriumsurface!, plotequilibriumsurface!,
     # plotting.jl
     modelflowchart!, plotchains, plotequilibrium!, plotequilibriuma!, plotequilibriumb!, 
-    plotequilibriumc!,plotequilibriumproportions!, plotfittedsimulationquantiles!, 
-    plotfourier!, plotimmuneduration!, plotnpi!, plotrsvage!, plotrsvsim!, plotsi!, 
-    plotstringency!,
+    plotequilibriumc!, plotequilibriumproportions!, plotfittedsimulationquantiles!, 
+    plotfittedsimulations!, plotfourier!, plotimmuneduration!, plotnpi!, plotrsvage!,
+    plotrsvsim!, plotsi!, plotstringency!,
     # plotformating.jl 
     formataxis!, labelplots!, setvalue!
  

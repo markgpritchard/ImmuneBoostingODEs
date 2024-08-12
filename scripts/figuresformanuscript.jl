@@ -16,7 +16,7 @@ include("fouriertransforms.jl") # provides simparms, unforced6mfreqs, unforced40
     # forced6mfreqs, forced400dfreqs, forced25freqs
 include("npisimulation.jl") # provides crgtdata, reduceday, increaseday, npisim_phi0, 
     # npisim_phi5, npisim_phi13_2, npiparms
-include("rsvanalysis.jl") # provides data, rsvsim_psi0, rsvsim_psi5, rsvsim_psi13_2,
+include("displayrsvanalysis.jl") # provides data, rsvsim_psi0, rsvsim_psi5, rsvsim_psi13_2,
     # agedata, rsvparms
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -58,11 +58,21 @@ safesave(plotsdir("npisimulationplot.pdf"), npisimulationplot)
 # Respiratory syncytial virus data with simulations / figure 4 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-rsvfigure = Figure(; size = ( 400, 600 ))
-plotrsvsim!(rsvfigure, data, rsvsim_psi0, rsvsim_psi5, rsvsim_psi13_2, rsvparms) 
+fittedparametersfig = let 
+    fig = Figure(; size=( 800, 1000 ))
+    plotvvector = [ 
+        plotvals01, plotvals02, plotvals04, plotvals1, plotvals2, plotvals4, plotvals10 
+    ]
+    parametervector = [
+        rsvparameters01, rsvparameters02, rsvparameters04, 
+        rsvparameters1, rsvparameters2, rsvparameters4, rsvparameters10 
+    ]
+    plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdata, saveat)  
+    
+    fig
+end
 
-rsvfigure
-safesave(plotsdir("rsvfigure.pdf"), rsvfigure)
+safesave(plotsdir("fittedparametersfig.pdf"), fittedparametersfig)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -59,7 +59,7 @@ end
 memosolver(prob; kwargs...) = @memoize solve(prob; kwargs...)
 memosolver(prob, alg; kwargs...) = @memoize solve(prob, alg; kwargs...)
 
-function loadrsvdata(omega; ids=1:4, maxrounds=12,)
+function loadrsvdata(omega; ids=1:5, maxrounds=12,)
     df = DataFrame(
         :iteration => Int[ ],
         :chain => Int[ ],

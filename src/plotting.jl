@@ -584,10 +584,175 @@ end
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 function plotfittedsimulationquantiles!(ax, data, plotvals, saveat)
-    scatter!(ax, saveat[2:end], data.Cases; color=:black, markersize=5)
+    scatter!(ax, saveat[2:end], data.Cases; color=( :black, 0.5 ), markersize=5)
     lines!(ax, saveat[2:end], [ y[2] for y ∈ plotvals ]; color=COLOUR_I)
     band!(
         ax, saveat[2:end], [ y[1] for y ∈ plotvals ], [ y[3] for y ∈ plotvals ]; 
         color=( COLOUR_I, 0.5 )
     )
+end
+
+function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdata, saveat)    
+    inds = findall(x -> x >= 50, crgtdata.StringencyIndex_Average)
+    reduceday = crgtdata.Date[inds[1]]
+    increaseday = crgtdata.Date[last(inds)]
+    pv = parametervector
+    
+    γ = 48.7
+    μ = 0.0087
+    logomegavalues = log.([ 0.1, 0.2, 0.4, 1.0, 2.0, 4.0, 10.0 ])
+    omegalabels = [ "0.1", "0.2", "0.4", "1.0", "2.0", "4.0", "10.0" ]
+    
+    ga = GridLayout(fig[1, 1])
+    rsvax = Axis(ga[1, 1])
+    lines!(rsvax, saveat[2:end], data.Cases; color=:black)
+    vspan!(rsvax, reduceday, increaseday, color=( :gray, 0.1 ))
+
+    axs = [ Axis(ga[i, 1]) for i ∈ 3:9 ]
+    for (i, v) ∈ enumerate(plotvvector)
+        plotfittedsimulationquantiles!(axs[i], data, v, saveat)
+        text!(axs[i], 2016.8, 550; text="ω=$(omegalabels[i])", fontsize=11.84)
+    end
+
+    stringencyax = Axis(ga[3:9, 1])
+    vspan!(stringencyax, reduceday, increaseday, color=( :gray, 0.1 ))
+
+    gb = GridLayout(fig[1, 2])
+    ax1 = Axis(gb[1, 1]; xticks=( logomegavalues, omegalabels ))
+    scatter!(
+        ax1, logomegavalues, [ quantile(v.log_density, 0.5) for v ∈ pv ]; 
+        color=:blue
+    )
+    rangebars!(
+        ax1, 
+        logomegavalues, 
+        [ quantile(v.log_density, 0.05) for v ∈ pv ], 
+        [ quantile(v.log_density, 0.95) for v ∈ pv ];
+        color=:blue,
+    )
+    ax2 = Axis(gb[2, 1]; xticks=( logomegavalues, omegalabels ))
+    scatter!(
+        ax2, 
+        logomegavalues, 
+        [ quantile(v.β0, 0.5) for v ∈ pv ] ./ (γ + μ); 
+        color=:blue
+    )
+    rangebars!(
+        ax2, 
+        logomegavalues, 
+        [ quantile(v.β0, 0.05) for v ∈ pv ] ./ (γ + μ), 
+        [ quantile(v.β0, 0.95) for v ∈ pv ] ./ (γ + μ);
+        color=:blue,
+    )
+    ax3 = Axis(gb[3, 1]; xticks=( logomegavalues, omegalabels ))
+    scatter!(
+        ax3, 
+        logomegavalues, 
+        #[ quantile(v.β1, 0.5) for v ∈ pv ] .* [ quantile(v.β0, 0.5) for v ∈ pv ] ./ (γ + μ); 
+        [ quantile(v.β1, 0.5) for v ∈ pv ]; 
+        color=:blue
+    )
+    rangebars!(
+        ax3, 
+        logomegavalues, 
+        #[ quantile(v.β1, 0.05) for v ∈ pv ] .* [ quantile(v.β0, 0.05) for v ∈ pv ] ./ (γ + μ), 
+        #[ quantile(v.β1, 0.95) for v ∈ pv ] .* [ quantile(v.β0, 0.95) for v ∈ pv ] ./ (γ + μ);
+        [ quantile(v.β1, 0.05) for v ∈ pv ], 
+        [ quantile(v.β1, 0.95) for v ∈ pv ];
+        color=:blue,
+    )
+    ax4 = Axis(
+        gb[4, 1]; 
+        xticks=( logomegavalues, omegalabels ), 
+        yticks=( 
+            log.([ 0.001, 0.01, 0.1, 1, 10, 100, 1000 ]), 
+            [ "0.001", "0.01", "0.1", "1", "10", "100", "1000" ]
+        )
+    )
+    scatter!(
+        ax4, logomegavalues, log.([ quantile(v.ψ, 0.5) for v ∈ pv ]); 
+        color=:blue
+    )
+    rangebars!(
+        ax4, 
+        logomegavalues, 
+        log.([ quantile(v.ψ, 0.05) for v ∈ pv ]), 
+        log.([ quantile(v.ψ, 0.95) for v ∈ pv ]);
+        color=:blue,
+    )
+    ax5 = Axis(gb[5, 1]; xticks=( logomegavalues, omegalabels ))
+    scatter!(
+        ax5, logomegavalues, 1 .- [ quantile(v.βreduction1, 0.5) for v ∈ pv ]; 
+        color=:blue
+    )
+    rangebars!(
+        ax5, 
+        logomegavalues, 
+        1 .- [ quantile(v.βreduction1, 0.05) for v ∈ pv ], 
+        1 .- [ quantile(v.βreduction1, 0.95) for v ∈ pv ];
+        color=:blue,
+    )
+    ax6 = Axis(gb[6, 1]; xticks=( logomegavalues, omegalabels ))
+    scatter!(
+        ax6, logomegavalues, [ quantile(v.detection, 0.5) for v ∈ pv ] .* 100; 
+        color=:blue
+    )
+    rangebars!(
+        ax6, 
+        logomegavalues, 
+        [ quantile(v.detection, 0.05) for v ∈ pv ] .* 100, 
+        [ quantile(v.detection, 0.95) for v ∈ pv ] .* 100;
+        color=:blue,
+    )
+    linkaxes!(rsvax, axs...)
+    linkxaxes!(stringencyax, axs...)
+    formataxis!(rsvax)
+    for i ∈ 1:7 
+        formataxis!(axs[i], hidex=(i != 7), hidexticks=(i != 7))
+        if i != 7 hidespines!(axs[i], :b) end
+    end
+    formataxis!(
+        stringencyax; 
+        hidespines=( :l, :r, :t, :b ), 
+        hidex=true, hidexticks=true, hidey=true, hideyticks=true
+    )
+    Label(ga[1, 0], "Weekly incidence"; fontsize=11.84, rotation=π/2, tellheight=false)
+    Label(ga[2, 1], "Year"; fontsize=11.84, tellwidth=false)
+    Label(
+        ga[3:9, 0], "Simulated weekly incidence"; 
+        fontsize=11.84, rotation=π/2, tellheight=false
+    )
+    Label(ga[10, 1], "Year"; fontsize=11.84, tellwidth=false)
+    colgap!(ga, 1, 5)
+    for r ∈ [ 1, 9 ] rowgap!(ga, r, 5) end
+    for (i, ax) ∈ enumerate([ ax1, ax2, ax3, ax4, ax5, ax6 ])
+        formataxis!(ax, hidex=(i != 6), hidexticks=(i != 6))
+        if i != 6 hidespines!(ax, :b) end
+        if i != 1 && i != 5
+            setvalue!(ax, 1, 0)
+        end
+    end
+    Label(gb[1, 0], "Log likelihood"; fontsize=11.84, rotation=π/2, tellheight=false)
+    Label(gb[2, 0], "Mean R₀"; fontsize=11.84, rotation=π/2, tellheight=false)
+    Label(
+        gb[3, 0], "Magnitude of\nseasonal forcing"; 
+        fontsize=11.84, rotation=π/2, tellheight=false
+    )
+    Label(
+        gb[4, 0], "Magnitude of natural\nimmune boosting, ψ"; 
+        fontsize=11.84, rotation=π/2, tellheight=false
+    )
+    Label(
+        gb[5, 0], "Transmission reduction from\nnon-pharmaceutical interventions"; 
+        fontsize=11.84, rotation=π/2, tellheight=false
+    )
+    Label(
+        gb[6, 0], "Proportion\ndiagnosed, %"; 
+        fontsize=11.84, rotation=π/2, tellheight=false
+    )
+    Label(gb[7, 1], "Waning rate, ω"; fontsize=11.84, tellwidth=false)
+    colgap!(gb, 1, 5)
+    rowgap!(gb, 6, 5)
+
+    labelplots!([ "A", "B", "C" ], [ ga, ga, gb ]; rows=[ 1, 3, 1 ])
 end
