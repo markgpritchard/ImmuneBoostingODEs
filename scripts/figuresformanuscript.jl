@@ -77,11 +77,11 @@ safesave(plotsdir("fourierplot.pdf"), fourierplot)
 fittedparametersfig = let 
     fig = Figure(; size=( 800, 1000 ))
     plotvvector = [ 
-        plotvals01, plotvals02, plotvals04, plotvals1, plotvals2, plotvals4, plotvals10 
+        plotvals01, plotvals02, plotvals04, plotvals1, plotvals2, plotvals4, plotvals6 
     ]
     parametervector = [
         rsvparameters01, rsvparameters02, rsvparameters04, 
-        rsvparameters1, rsvparameters2, rsvparameters4, rsvparameters10 
+        rsvparameters1, rsvparameters2, rsvparameters4, rsvparameters6 
     ]
     plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdata, saveat)  
     

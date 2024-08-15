@@ -624,8 +624,8 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
     
     γ = 48.7
     μ = 0.0087
-    logomegavalues = log.([ 0.1, 0.2, 0.4, 1.0, 2.0, 4.0, 10.0 ])
-    omegalabels = [ "0.1", "0.2", "0.4", "1.0", "2.0", "4.0", "10.0" ]
+    logomegavalues = log.([ 0.1, 0.2, 0.4, 1.0, 2.0, 4.0, 6 ])
+    omegalabels = [ "0.1", "0.2", "0.4", "1.0", "2.0", "4.0", "6.0" ]
     
     ga = GridLayout(fig[1, 1])
     rsvax = Axis(ga[1, 1])
@@ -654,18 +654,22 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
         [ quantile(v.log_density, 0.95) for v ∈ pv ];
         color=:blue,
     )
-    ax2 = Axis(gb[2, 1]; xticks=( logomegavalues, omegalabels ))
+    ax2 = Axis(
+        gb[2, 1]; 
+        xticks=( logomegavalues, omegalabels ), 
+        yticks=( log.([ 1, 2, 5, 10, 20, 40 ]), [ "1", "2", "5", "10", "20", "40" ])
+    )
     scatter!(
         ax2, 
         logomegavalues, 
-        [ quantile(v.β0, 0.5) for v ∈ pv ] ./ (γ + μ); 
+        log.([ quantile(v.β0, 0.5) for v ∈ pv ] ./ (γ + μ)); 
         color=:blue
     )
     rangebars!(
         ax2, 
         logomegavalues, 
-        [ quantile(v.β0, 0.05) for v ∈ pv ] ./ (γ + μ), 
-        [ quantile(v.β0, 0.95) for v ∈ pv ] ./ (γ + μ);
+        log.([ quantile(v.β0, 0.05) for v ∈ pv ] ./ (γ + μ)), 
+        log.([ quantile(v.β0, 0.95) for v ∈ pv ] ./ (γ + μ));
         color=:blue,
     )
     ax3 = Axis(gb[3, 1]; xticks=( logomegavalues, omegalabels ))
@@ -673,7 +677,7 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
         ax3, 
         logomegavalues, 
         #[ quantile(v.β1, 0.5) for v ∈ pv ] .* [ quantile(v.β0, 0.5) for v ∈ pv ] ./ (γ + μ); 
-        [ quantile(v.β1, 0.5) for v ∈ pv ]; 
+        100 .* [ quantile(v.β1, 0.5) for v ∈ pv ]; 
         color=:blue
     )
     rangebars!(
@@ -681,8 +685,8 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
         logomegavalues, 
         #[ quantile(v.β1, 0.05) for v ∈ pv ] .* [ quantile(v.β0, 0.05) for v ∈ pv ] ./ (γ + μ), 
         #[ quantile(v.β1, 0.95) for v ∈ pv ] .* [ quantile(v.β0, 0.95) for v ∈ pv ] ./ (γ + μ);
-        [ quantile(v.β1, 0.05) for v ∈ pv ], 
-        [ quantile(v.β1, 0.95) for v ∈ pv ];
+        100 .* [ quantile(v.β1, 0.05) for v ∈ pv ], 
+        100 .* [ quantile(v.β1, 0.95) for v ∈ pv ];
         color=:blue,
     )
     ax4 = Axis(
@@ -706,14 +710,14 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
     )
     ax5 = Axis(gb[5, 1]; xticks=( logomegavalues, omegalabels ))
     scatter!(
-        ax5, logomegavalues, 1 .- [ quantile(v.βreduction1, 0.5) for v ∈ pv ]; 
+        ax5, logomegavalues, 100 .* (1 .- [ quantile(v.βreduction1, 0.5) for v ∈ pv ]); 
         color=:blue
     )
     rangebars!(
         ax5, 
         logomegavalues, 
-        1 .- [ quantile(v.βreduction1, 0.05) for v ∈ pv ], 
-        1 .- [ quantile(v.βreduction1, 0.95) for v ∈ pv ];
+        100 .* (1 .- [ quantile(v.βreduction1, 0.05) for v ∈ pv ]), 
+        100 .* (1 .- [ quantile(v.βreduction1, 0.95) for v ∈ pv ]);
         color=:blue,
     )
     ax6 = Axis(gb[6, 1]; xticks=( logomegavalues, omegalabels ))
@@ -759,7 +763,7 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
     Label(gb[1, 0], "Log likelihood"; fontsize=11.84, rotation=π/2, tellheight=false)
     Label(gb[2, 0], "Mean R₀"; fontsize=11.84, rotation=π/2, tellheight=false)
     Label(
-        gb[3, 0], "Magnitude of\nseasonal forcing"; 
+        gb[3, 0], "Magnitude of\nseasonal forcing, %"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
     Label(
@@ -767,7 +771,7 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
         fontsize=11.84, rotation=π/2, tellheight=false
     )
     Label(
-        gb[5, 0], "Transmission reduction from\nnon-pharmaceutical interventions"; 
+        gb[5, 0], "Transmission reduction from\ninterventions, %"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
     Label(
