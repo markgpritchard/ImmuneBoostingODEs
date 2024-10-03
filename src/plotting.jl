@@ -642,20 +642,8 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
     vspan!(stringencyax, reduceday, increaseday, color=( :gray, 0.1 ))
 
     gb = GridLayout(fig[1, 2])
-    ax1 = Axis(gb[1, 1]; xticks=( logomegavalues, omegalabels ))
-    scatter!(
-        ax1, logomegavalues, [ quantile(v.log_density, 0.5) for v ∈ pv ]; 
-        color=:blue
-    )
-    rangebars!(
-        ax1, 
-        logomegavalues, 
-        [ quantile(v.log_density, 0.05) for v ∈ pv ], 
-        [ quantile(v.log_density, 0.95) for v ∈ pv ];
-        color=:blue,
-    )
     ax2 = Axis(
-        gb[2, 1]; 
+        gb[1, 1]; 
         xticks=( logomegavalues, omegalabels ), 
         yticks=( log.([ 1, 2, 5, 10, 20, 40 ]), [ "1", "2", "5", "10", "20", "40" ])
     )
@@ -672,7 +660,7 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
         log.([ quantile(v.β0, 0.95) for v ∈ pv ] ./ (γ + μ));
         color=:blue,
     )
-    ax3 = Axis(gb[3, 1]; xticks=( logomegavalues, omegalabels ))
+    ax3 = Axis(gb[2, 1]; xticks=( logomegavalues, omegalabels ))
     scatter!(
         ax3, 
         logomegavalues, 
@@ -690,7 +678,7 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
         color=:blue,
     )
     ax4 = Axis(
-        gb[4, 1]; 
+        gb[3, 1]; 
         xticks=( logomegavalues, omegalabels ), 
         yticks=( 
             log.([ 0.001, 0.01, 0.1, 1, 10, 100, 1000 ]), 
@@ -708,7 +696,7 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
         log.([ quantile(v.ψ, 0.95) for v ∈ pv ]);
         color=:blue,
     )
-    ax5 = Axis(gb[5, 1]; xticks=( logomegavalues, omegalabels ))
+    ax5 = Axis(gb[4, 1]; xticks=( logomegavalues, omegalabels ))
     scatter!(
         ax5, logomegavalues, 100 .* (1 .- [ quantile(v.βreduction1, 0.5) for v ∈ pv ]); 
         color=:blue
@@ -720,7 +708,7 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
         100 .* (1 .- [ quantile(v.βreduction1, 0.95) for v ∈ pv ]);
         color=:blue,
     )
-    ax6 = Axis(gb[6, 1]; xticks=( logomegavalues, omegalabels ))
+    ax6 = Axis(gb[5, 1]; xticks=( logomegavalues, omegalabels ))
     scatter!(
         ax6, logomegavalues, [ quantile(v.detection, 0.5) for v ∈ pv ] .* 100; 
         color=:blue
@@ -753,34 +741,31 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
     Label(ga[10, 1], "Year"; fontsize=11.84, tellwidth=false)
     colgap!(ga, 1, 5)
     for r ∈ [ 1, 9 ] rowgap!(ga, r, 5) end
-    for (i, ax) ∈ enumerate([ ax1, ax2, ax3, ax4, ax5, ax6 ])
-        formataxis!(ax, hidex=(i != 6), hidexticks=(i != 6))
-        if i != 6 hidespines!(ax, :b) end
-        if i != 1 && i != 5
-            setvalue!(ax, 1, 0)
-        end
+    for (i, ax) ∈ enumerate([ ax2, ax3, ax4, ax5, ax6 ])
+        formataxis!(ax, hidex=(i != 5), hidexticks=(i != 5))
+        if i != 5 hidespines!(ax, :b) end
+        if i != 4 setvalue!(ax, 1, 0) end
     end
-    Label(gb[1, 0], "Log likelihood"; fontsize=11.84, rotation=π/2, tellheight=false)
-    Label(gb[2, 0], "Mean R₀"; fontsize=11.84, rotation=π/2, tellheight=false)
+    Label(gb[1, 0], "Mean R₀"; fontsize=11.84, rotation=π/2, tellheight=false)
     Label(
-        gb[3, 0], "Magnitude of\nseasonal forcing, %"; 
+        gb[2, 0], "Magnitude of\nseasonal forcing, %"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
     Label(
-        gb[4, 0], "Magnitude of natural\nimmune boosting, ψ"; 
+        gb[3, 0], "Magnitude of natural\nimmune boosting, ψ"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
     Label(
-        gb[5, 0], "Transmission reduction from\ninterventions, %"; 
+        gb[4, 0], "Transmission reduction from\ninterventions, %"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
     Label(
-        gb[6, 0], "Proportion\ndiagnosed, %"; 
+        gb[5, 0], "Proportion\ndiagnosed, %"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
-    Label(gb[7, 1], "Waning rate, ω"; fontsize=11.84, tellwidth=false)
+    Label(gb[6, 1], "Waning rate, ω"; fontsize=11.84, tellwidth=false)
     colgap!(gb, 1, 5)
-    rowgap!(gb, 6, 5)
+    rowgap!(gb, 5, 5)
 
     labelplots!([ "A", "B", "C" ], [ ga, ga, gb ]; rows=[ 1, 3, 1 ])
 end

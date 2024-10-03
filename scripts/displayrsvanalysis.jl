@@ -31,9 +31,9 @@ R0_01 = let
     beta0s ./ (48.7 + 0.0087)
 end
 #3-element Vector{Float64}:
-# 24.298853353099883
-# 28.137656709252983
-# 30.339119719670038
+# 27.9398281195748
+# 29.58401062939877
+# 30.730225320740598
 
 rsvparameters02 = loadrsvdata(0.2)
 plotchains(rsvparameters02)
@@ -48,9 +48,9 @@ plotchains(rsvparameters04)
 plotvals04 = fittedsimulationquantiles(rsvparameters04, 0.4, saveat, cbs)
 βreduction1_04 = 1 .- quantile(rsvparameters04.βreduction1, [ 0.95, 0.5, 0.05 ])
 #3-element Vector{Float64}:
-# 0.42364255789478045      
-# 0.4288752645900158       
-# 0.44024896448040374  
+# 0.42537389746949894
+# 0.4274937278262533
+# 0.4304722062246449
 
 rsvparameters1 = loadrsvdata(1.0)
 plotchains(rsvparameters1)
@@ -75,9 +75,9 @@ plotchains(rsvparameters2)
 plotvals2 = fittedsimulationquantiles(rsvparameters2, 2.0, saveat, cbs)
 βreduction1_2 = 1 .- quantile(rsvparameters2.βreduction1, [ 0.95, 0.5, 0.05 ])
 #3-element Vector{Float64}:
-# 0.2587396453046521
-# 0.2801163694518988
-# 0.285555413324349
+# 0.27889082920822683
+# 0.2816906091386049
+# 0.28507902779791494
 
 rsvparameters4 = loadrsvdata(4.0)
 plotchains(rsvparameters4)
@@ -87,7 +87,7 @@ plotvals4 = fittedsimulationquantiles(rsvparameters4, 4.0, saveat, cbs)
 
 rsvparameters6 = loadrsvdata(6.0)
 plotchains(rsvparameters6)
-filter!(:chain => x -> x ∈ [ 4, 5 ], rsvparameters6)
+filter!(:chain => x -> x != 1, rsvparameters6)
 plotchains(rsvparameters6)
 plotvals6 = fittedsimulationquantiles(rsvparameters6, 6.0, saveat, cbs)
 R0_6 = let 
@@ -95,16 +95,16 @@ R0_6 = let
     beta0s ./ (48.7 + 0.0087)
 end
 #3-element Vector{Float64}:
-# 1.4246968850319364
-# 1.5896206377227857
-# 1.6073448064055542
+# 1.5808061809771425
+# 1.592694730925088
+# 1.6042283249278522
 beta1_6 = quantile(rsvparameters6.β1, [ 0.05, 0.5, 0.95 ])
 #3-element Vector{Float64}:
-# 0.047174023826682746
-# 0.07097804794377974
-# 0.0745764994939283
+# 0.06894139362433213
+# 0.07223981399834295
+# 0.07529313242053985
 psi_6 = quantile(rsvparameters6.ψ, [ 0.05, 0.5, 0.95 ])
 #3-element Vector{Float64}:
-# 223.8658697456354
-# 298.0612853727774
-# 320.64995452370266
+# 288.26257743152075
+# 301.2348000922061
+# 314.895983917204
