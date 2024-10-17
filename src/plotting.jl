@@ -732,7 +732,7 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
         hidespines=( :l, :r, :t, :b ), 
         hidex=true, hidexticks=true, hidey=true, hideyticks=true
     )
-    Label(ga[1, 0], "Weekly incidence"; fontsize=11.84, rotation=π/2, tellheight=false)
+    Label(ga[1, 0], "Weekly\nincidence"; fontsize=11.84, rotation=π/2, tellheight=false)
     Label(ga[2, 1], "Year"; fontsize=11.84, tellwidth=false)
     Label(
         ga[3:9, 0], "Simulated weekly incidence"; 
@@ -752,7 +752,7 @@ function plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdat
         fontsize=11.84, rotation=π/2, tellheight=false
     )
     Label(
-        gb[3, 0], "Magnitude of natural\nimmune boosting, ψ"; 
+        gb[3, 0], "ψ"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
     Label(

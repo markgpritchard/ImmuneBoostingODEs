@@ -116,7 +116,7 @@ safesave(plotsdir("posternpisimulationplot.pdf"), npisimulationplot)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 fittedparametersfig = let 
-    fig = Figure(; size=( 800, 1000 ))
+    fig = Figure(; size=( 550, 700 ))
     plotvvector = [ 
         plotvals01, plotvals02, plotvals04, plotvals1, plotvals2, plotvals4, plotvals6 
     ]

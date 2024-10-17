@@ -33,7 +33,7 @@ prob = fittedsimulationsetup(saveat)
 
 @model function fitmodel(
     incidence, prob, cbs, saveat;
-    betazeroprior=truncated(Exponential(100), 0, 4870),  # truncated at R0 = 100
+    betazeroprior=truncated(Exponential(150), 0, 4870),  # truncated at R0 = 100
     betaoneprior=Uniform(0, 0.9),
     phiprior=Uniform(-π, π),
     psiprior=truncated(Exponential(1), 0, 1000),
@@ -99,21 +99,23 @@ function Pigeons.initialization(target::FitmodelType, rng::AbstractRNG, ::Int64)
     return result
 end
 
+const seed = (round(Int, omega * 100) + id)
+
 fitted_pt = pigeons( ;
     target=fitmodel_target(; omega), 
     n_rounds=0,
     n_chains=10,
     multithreaded=true,
     record=[ traces; record_default() ],
-    seed=(id * 1000 + round(Int, omega * 10)),
+    seed,
     variational=GaussianReference(),
 )
 
 new_pt = fitted_pt
 
 for i ∈ 1:n_rounds
-    filename = "rsvparameters_omega_$(omega)_id_$(id)_nrounds_$(i).jld2"
-    nextfilename = "rsvparameters_omega_$(omega)_id_$(id)_nrounds_$(i + 1).jld2"
+    filename = "rsvparameters_omega_$(omega)_seed_$(seed)_id_$(id)_nrounds_$(i).jld2"
+    nextfilename = "rsvparameters_omega_$(omega)_seed_$(seed)_id_$(id)_nrounds_$(i + 1).jld2"
     isfile(datadir("sims", nextfilename)) && continue
     if isfile(datadir("sims", filename))
         global new_pt = load(datadir("sims", filename))["pt"]
