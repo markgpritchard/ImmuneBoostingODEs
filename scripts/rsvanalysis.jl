@@ -1,5 +1,10 @@
 
 using DrWatson
+
+@quickactivate "ImmuneBoostingODEs"
+using Pkg 
+Pkg.instantiate()
+
 @quickactivate :ImmuneBoostingODEs
 using DataFrames, DifferentialEquations, Pigeons, Random, Turing
 
@@ -8,7 +13,7 @@ testrun = true
 if length(ARGS) == 3 
     omega = parse(Float64, ARGS[1])
     id = parse(Int, ARGS[2])
-    n_rounds = min(12, parse(Int, ARGS[3]))
+    n_rounds = min(10, parse(Int, ARGS[3]))
 else
     omega = 2.0
     id = 1 
