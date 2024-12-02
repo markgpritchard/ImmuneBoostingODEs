@@ -16,7 +16,7 @@ include("fouriertransforms.jl") # provides simparms, unforced6mfreqs, unforced40
     # forced6mfreqs, forced400dfreqs, forced25freqs
 include("npisimulation.jl") # provides crgtdata, reduceday, increaseday, npisim_phi0, 
     # npisim_phi5, npisim_phi13_2, npiparms
-include("rsvanalysis.jl") # provides data, rsvsim_psi0, rsvsim_psi5, rsvsim_psi13_2,
+include("displayrsvanalysis.jl") # provides data, rsvsim_psi0, rsvsim_psi5, rsvsim_psi13_2,
     # agedata, rsvparms
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -35,72 +35,29 @@ safesave(plotsdir("introplot.pdf"), introplot)
 # Effect of boosting on equilibria / figure 2 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-equilibriumplot = Figure(; size = ( 800, 550 ))
-plotequilibrium!(equilibriumplot, critvector, bifurcationI_1_5, bifurcationI_5, 
-    bifurcationI_10, bifurcationI_15, basic5, basic1_5, basic5_, equilparms)
+equilibriumplot = let 
+    fig = Figure(; size=( 800, 750 ))
+    plotequilibrium!(
+        fig, critvector, bifurcationI_1_5, bifurcationI_5, 
+        bifurcationI_10, bifurcationI_15, basic5, basic1_5, basic5_, equilparms
+    )
+    gd = GridLayout(fig[3, 1:3])
+    plotsi!(
+        gd, stablesim, 
+        unstablein12, unstableout12, unstablein5, unstableout5, 
+        limitcycle12, limitcycle5
+    )
+    rowsize!(fig.layout, 3, Auto(0.75))
+    labelplots!("D", gd)
+    fig
+end
 
 equilibriumplot
 safesave(plotsdir("equilibriumplot.pdf"), equilibriumplot)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Non-pharmaceutical interventions plot / figure 3 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-npisimulationplot = Figure(; size = ( 800, 500 ))
-plotnpi!(npisimulationplot, npisim_phi0, npisim_phi5, npisim_phi13_2, npiparms) 
-
-npisimulationplot
-safesave(plotsdir("npisimulationplot.pdf"), npisimulationplot)
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Respiratory syncytial virus data with simulations / figure 4 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-rsvfigure = Figure(; size = ( 400, 600 ))
-plotrsvsim!(rsvfigure, data, rsvsim_psi0, rsvsim_psi5, rsvsim_psi13_2, rsvparms) 
-
-rsvfigure
-safesave(plotsdir("rsvfigure.pdf"), rsvfigure)
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Proportions in each compartment at equilibrium / supplementary figure 1
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-equilibriumproportionsplot = Figure(; size = ( 400, 800 ))
-plotequilibriumproportions!(equilibriumproportionsplot, equilSs, equilIs, equilRs, equilparms)
-
-equilibriumproportionsplot
-safesave(plotsdir("equilibriumproportionsplot.pdf"), equilibriumproportionsplot)
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Immune duration plot / supplementary figure 2
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-immunedurationplot = Figure(; size = ( 400, 350 ))
-plotimmuneduration!(immunedurationplot, immunedurationmodel)
-
-immunedurationplot
-safesave(plotsdir("immunedurationplot.pdf"), immunedurationplot)
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Susceptible--infectious planes / supplementary figure 3
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-siplot = Figure(; size = ( 800, 250 ))
-plotsi!(siplot, stablesim, unstablein12, unstableout12, unstablein5, unstableout5, 
-    limitcycle12, limitcycle5)
-
-siplot
-safesave(plotsdir("siplot.pdf"), siplot)
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Fourier transforms / supplementary figure 4 
+# Fourier transforms / figure 3 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 fourierplot = Figure(; size = ( 800, 300 ))
@@ -114,18 +71,28 @@ safesave(plotsdir("fourierplot.pdf"), fourierplot)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Age-stratified respiratory syncytial virus data  / supplementary figure 5 
+# Respiratory syncytial virus data with simulations / figure 4 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-rsvagefigure = Figure(; size = ( 400, 600 ))
-plotrsvage!(rsvagefigure, agedata)
+fittedparametersfig = let 
+    fig = Figure(; size=( 800, 1000 ))
+    plotvvector = [ 
+        plotvals01, plotvals02, plotvals04, plotvals1, plotvals2, plotvals4, plotvals6 
+    ]
+    parametervector = [
+        rsvparameters01, rsvparameters02, rsvparameters04, 
+        rsvparameters1, rsvparameters2, rsvparameters4, rsvparameters6 
+    ]
+    plotfittedsimulations!(fig, plotvvector, parametervector, data, crgtdata, saveat)  
+    
+    fig
+end
 
-rsvagefigure
-safesave(plotsdir("rsvagefigure.pdf"), rsvagefigure)
+safesave(plotsdir("fittedparametersfig.pdf"), fittedparametersfig)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Strigency Index / supplementary figure 6 
+# Stringency Index / supplementary figure 1
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 stringencyplot = Figure(; size = ( 400, 400 ))
@@ -133,3 +100,37 @@ plotstringency!(stringencyplot, crgtdata, reduceday, increaseday)
 
 stringencyplot
 safesave(plotsdir("stringencyplot.pdf"), stringencyplot)
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Proportions in each compartment at equilibrium / supplementary figure 2
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+equilibriumproportionsplot = Figure(; size = ( 400, 800 ))
+plotequilibriumproportions!(equilibriumproportionsplot, equilSs, equilIs, equilRs, equilparms)
+
+equilibriumproportionsplot
+safesave(plotsdir("equilibriumproportionsplot.pdf"), equilibriumproportionsplot)
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Non-pharmaceutical interventions plot / supplementary figure 3 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+npisimulationplot = Figure(; size = ( 800, 500 ))
+plotnpi!(npisimulationplot, npisim_phi0, npisim_phi5, npisim_phi13_2, npiparms) 
+
+npisimulationplot
+safesave(plotsdir("npisimulationplot.pdf"), npisimulationplot)
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Age-stratified respiratory syncytial virus data  / supplementary figure 4
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+rsvagefigure = Figure(; size = ( 400, 600 ))
+plotrsvage!(rsvagefigure, agedata)
+
+rsvagefigure
+safesave(plotsdir("rsvagefigure.pdf"), rsvagefigure)

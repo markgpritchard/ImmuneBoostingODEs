@@ -17,10 +17,10 @@ Variables should be strings of filenames, including `.csv` at the end.
 function processagedata(filename)
     data = CSV.read(filename, DataFrame)
 
-    # Select the rows that describe respiratory syncytial virus
+    # Select rows that describe respiratory syncytial virus
     subset!(data, :Pathogen => x -> x .== "Respiratory syncytial virus")
 
-    # Convert the dates to a proportion of the year 
+    # Convert dates to a proportion of the year 
     processcsvdates!(data, :WeekBeginning)
 
     # Set dates to start in April

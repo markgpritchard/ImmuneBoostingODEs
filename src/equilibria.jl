@@ -19,7 +19,7 @@ function equil(p; warntol = 1e-10)
     u = zeros(5)
     I = equili(p)
     _equil!(u, I, p)
-    equilwarning(u, warntol)
+    equilwarning(p, u, warntol)
     return u
 end 
 
@@ -36,7 +36,7 @@ function _endemicequil!(u, I, p)
 end 
 
 # Provide a warning if needed by `equil`
-function equilwarning(u, warntol)
+function equilwarning(p, u, warntol)
     if sum(u) < 1 - warntol || sum(u) > 1 + warntol
         @warn """
             equil($p) -> [$u]; sum(u) = $(sum(u))
@@ -276,7 +276,9 @@ function _findpsi(ind, psivector, β, γ, μ, ω, sigdigits; kwargs...)
     # vector for second iteration 
     v = _findpsivector(ind, psivector) 
     # 2nd to penultimate iterations
-    for _ ∈ oneto(sigdigits - 2) v = findpsivector(v, β, γ, μ, ω) end 
+    for _ ∈ 1:(sigdigits - 2) 
+        v = findpsivector(v, β, γ, μ, ω) 
+    end 
     # final iteration
     ind = findpsiindex(v, β, γ, μ, ω)
     return v[ind]
