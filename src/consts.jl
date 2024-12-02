@@ -27,12 +27,9 @@ const COMPARTMENTINDICES = Dict(:S => 1, :I => 2, :R1 => 3, :R2 => 4, :R3 => 5, 
 
 # Consistent colour scheme across plots 
 
-const COLOUR_S = :blue
-const COLOUR_I = :darkgoldenrod1
-const COLOUR_R = :seagreen4
-const COLOURVECTOR = [ 
-    COLOUR_S, COLOUR_I, COLOUR_R, :plum, :brown2, :dodgerblue3, :skyblue2, :lightgray 
-]
+const COLOUR_S = COLOURVECTOR[1]
+const COLOUR_I = COLOURVECTOR[2]
+const COLOUR_R = COLOURVECTOR[3]
 
 # outputs from MCMC that are not plotted 
 const _NOPLOTNAMES = [ 

@@ -1,7 +1,8 @@
 
 module ImmuneBoostingODEs 
 
-using CairoMakie, CSV, DataFrames, DifferentialEquations, DrWatson, FFTW, StatsBase
+using CairoMakie, CSV, DataFrames, DifferentialEquations, DrWatson, FFTW, PlotFormatting
+using StatsBase
 using LinearAlgebra: eigen
 using Memoization: @memoize
 using Roots: ZeroProblem
@@ -15,32 +16,29 @@ include("model.jl")
 include("analysedata.jl")
 include("equilibriumsurface.jl")
 include("plotting.jl")
-include("plotformating.jl")
 
 export 
-    # structs.jl 
+    ## structs.jl 
     SirnsParameters, LambdaParms,
-    # consts.jl"
+    ## consts.jl"
     COLOURVECTOR, COLOUR_I, COLOUR_R, COLOUR_S, MONTHDAYS,
-    #processdata.jl
+    ## processdata.jl
     printrawdate, processagedata, processcrgtvdata, processrsvdata,
-    # equilibria.jl
+    ## equilibria.jl
     bifurcationlimits, equil, equileigen, equili, equilplotdata, equilr, equilri, equils, 
     findpsi, pl_bifurcationlimits, realmaxequileigen,
-    # model.jl
+    ## model.jl
     casespertimeblock, modelcompartments, pl_modelincidence, reducetransmission!, 
     restoretransmission!, run_sirns, sirns!, sirns_u0, 
-    # analysedata.jl
+    ## analysedata.jl
     fittedsimulationquantiles, fittedsimulationsetup, fourierhmdata, loadrsvdata, 
     memosolver, runfittedsimulations, 
-    # equilibriumsurface.jl
+    ## equilibriumsurface.jl
     labelequilibriumsurface!, plotequilibriumsurface!,
-    # plotting.jl
+    ## plotting.jl
     modelflowchart!, plotchains, plotequilibrium!, plotequilibriuma!, plotequilibriumb!, 
-    plotequilibriumc!, plotequilibriumproportions!, plotfittedsimulationquantiles!, 
-    plotfittedsimulations!, plotfourier!, plotimmuneduration!, plotnpi!, plotrsvage!,
-    plotrsvsim!, plotsi!, plotstringency!,
-    # plotformating.jl 
-    formataxis!, labelplots!, setvalue!
+    plotequilibriumc!, plotequilibriumproportions!, plotequilibriumproportionscontour!,
+    plotfittedsimulationquantiles!, plotfittedsimulations!, plotfourier!, 
+    plotimmuneduration!, plotnpi!, plotrsvage!, plotrsvsim!, plotsi!, plotstringency!
  
 end  # module ImmuneBoostingODEs 

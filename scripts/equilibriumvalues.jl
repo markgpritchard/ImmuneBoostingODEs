@@ -70,6 +70,21 @@ critvector = let
         for β ∈ betas ]
 end 
 
+critpsi = let 
+    @unpack γ, μ, durations = equilparms
+    R0s = 0:0.1:17.5 
+    betas = R0s .* (γ + μ)
+    omegas = 1 ./ durations
+    outputs = zeros(176, 1026)
+    for (i, beta) ∈ enumerate(betas) 
+        for (j, omega) ∈ enumerate(omegas)
+            outputs[i, j] = findpsi(beta, γ, μ, omega; warntol=Inf)
+        end
+    end
+    outputs
+end
+
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Simulations to show stability and limit cycles

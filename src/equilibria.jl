@@ -19,7 +19,7 @@ function equil(p; warntol = 1e-10)
     u = zeros(5)
     I = equili(p)
     _equil!(u, I, p)
-    equilwarning(u, warntol)
+    equilwarning(p, u, warntol)
     return u
 end 
 
@@ -36,7 +36,7 @@ function _endemicequil!(u, I, p)
 end 
 
 # Provide a warning if needed by `equil`
-function equilwarning(u, warntol)
+function equilwarning(p, u, warntol)
     if sum(u) < 1 - warntol || sum(u) > 1 + warntol
         @warn """
             equil($p) -> [$u]; sum(u) = $(sum(u))

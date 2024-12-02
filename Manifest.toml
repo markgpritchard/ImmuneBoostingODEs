@@ -2,7 +2,7 @@
 
 julia_version = "1.9.3"
 manifest_format = "2.0"
-project_hash = "447e28ae0582e859811a5c9e2e6e9f6f2c33a020"
+project_hash = "ede1c5409e2ef9e60b61121e9e2d946ae1e64683"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "016833eb52ba2d6bea9fcb50ca295980e728ee24"
@@ -2052,6 +2052,14 @@ deps = ["Pkg"]
 git-tree-sha1 = "f9501cc0430a26bc3d156ae1b5b0c1b47af4d6da"
 uuid = "eebad327-c553-4316-9ea0-9fa01ccd7688"
 version = "0.3.3"
+
+[[deps.PlotFormatting]]
+deps = ["CairoMakie", "Makie"]
+git-tree-sha1 = "81e558a909d83ec6d154ff52842b010a3d94c3f0"
+repo-rev = "main"
+repo-url = "https://github.com/markgpritchard/PlotFormatting.jl"
+uuid = "fafed4c3-eaab-4ef5-9b79-61964d847033"
+version = "0.2.2"
 
 [[deps.PlotUtils]]
 deps = ["ColorSchemes", "Colors", "Dates", "PrecompileTools", "Printf", "Random", "Reexport", "StableRNGs", "Statistics"]

@@ -13,10 +13,10 @@ using DifferentialEquations
 npiparms = let 
     γ = 48.7    # generation time 7.5 days
     μ = .0087   # Scotland's birth rate = 48000 / 5.5e6
-    tspan = ( -1000.65, 10. ) 
-    βreduction = .8
+    tspan = ( -1000.65, 10.0 ) 
+    βreduction = 0.8
     reductiontime = 5.2
-    θ = .01 # proportion of incident infections recorded
+    θ = 0.01  # proportion of incident infections recorded
     simulateddates = collect(-7/365:7/365:10)
     @ntuple γ μ tspan βreduction reductiontime θ simulateddates
 end
@@ -100,21 +100,22 @@ npisim_phi5 = let
     R0 = 1.285
     ψ = 5
     immuneduration = .5
-    β1 = .082 
-    ϕ = -.25
+    β1 = 0.082 
+    ϕ = -0.25
     β0 = R0 * (γ + μ)
     ω = 1 / immuneduration 
 
-    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, βreduction, 1.) 
-    u0 = sirns_u0(.5, .001; equalrs = true, p, t0 = -.65)
+    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, βreduction, 1.0) 
+    u0 = sirns_u0(.5, .001; equalrs = true, p, t0=-0.65)
     save_positions = ( false, false )
     redcb = PresetTimeCallback(reductiontime, reducetransmission!; save_positions)
     rescb = PresetTimeCallback(reductiontime + 1, restoretransmission!; save_positions)
     cbs = CallbackSet(redcb, rescb)
 
-    sol = solve(prob, Vern9(lazy = false); 
-        p, u0, callback = cbs, saveat = simulateddates, 
-        abstol = 1e-15, reltol = 1e-15, maxiters = 5e6)
+    sol = solve(
+        prob, Vern9(lazy=false); 
+        p, u0, callback=cbs, saveat=simulateddates, abstol=1e-15, reltol=1e-15, maxiters=5e6,
+    )
     compartments = modelcompartments(sol, p)
     cases = casespertimeblock(compartments[:cc]) * 5_500_000 * θ
     @ntuple compartments cases
@@ -129,16 +130,18 @@ npisim_phi13_2 = let
     β0 = R0 * (γ + μ)
     ω = 1 / immuneduration 
 
-    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, βreduction, 1.)
-    u0 = sirns_u0(.5, .001; equalrs = true, p, t0 = -.65)
+    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, βreduction, 1.0)
+    u0 = sirns_u0(.5, .001; equalrs=true, p, t0 =-0.65)
     save_positions = ( false, false )
     redcb = PresetTimeCallback(reductiontime, reducetransmission!; save_positions)
     rescb = PresetTimeCallback(reductiontime + 1, restoretransmission!; save_positions)
     cbs = CallbackSet(redcb, rescb)
+    tspan = ( -1000.45, 10.0 )  # align this simulation with the others
 
-    sol = solve(prob, Vern9(lazy = false); 
-        p, u0, callback = cbs, saveat = simulateddates, 
-        abstol = 1e-15, reltol = 1e-15, maxiters = 5e6)
+    sol = solve(
+        prob, Vern9(lazy=false); 
+        p, u0, tspan, callback=cbs, saveat=simulateddates, abstol=1e-15, reltol=1e-15, maxiters=5e6,
+    )
     compartments = modelcompartments(sol, p)
     cases = casespertimeblock(compartments[:cc]) * 5_500_000 * θ
     @ntuple compartments cases
