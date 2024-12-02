@@ -476,6 +476,15 @@ end
 function plotrsvage!(fig, agedata)
     ms = [ 0, 91, 183, 275, 365 ] ./ 365
     colours = [ ( :gray, 0.4 ); [ COLOURVECTOR[i] for i ∈ 1:3 ] ]
+    agelabels = Dict(
+        "<1 years" => L"$<1$ years",
+        "1-4 years" => L"$1$–$4$ years",
+        "5-14 years" => L"$5$–$14$ years",
+        "15-44 years" => L"$15$–$44$ years",
+        "45-64 years" => L"$45$–$64$ years",
+        "65-74 years" => L"$65$–$74$ years",
+        "75+ years" => L"$\ge 75$ years",
+    )
 
     axs = [ 
         i <= 4 ? 
@@ -502,7 +511,7 @@ function plotrsvage!(fig, agedata)
                 maxy = maximum(getproperty(d2, Symbol("Rate$a")))
                 text!(
                     axs[j], 0, 0.9 * maxy; 
-                    text="$a", fontsize=11.84, align=( :left, :top )
+                    text="$(agelabels[a])", fontsize=11.84, align=( :left, :top )
                 )
             end
         end
@@ -745,8 +754,8 @@ end
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 function plotfittedsimulationquantiles!(ax, data, plotvals, saveat)
-    scatter!(ax, saveat[2:end], data.Cases; color=( :black, 0.5 ), markersize=5)
-    lines!(ax, saveat[2:end], [ y[2] for y ∈ plotvals ]; color=COLOUR_I)
+    scatter!(ax, saveat[2:end], data.Cases; color=:black, markersize=2,)
+    lines!(ax, saveat[2:end], [ y[2] for y ∈ plotvals ]; color=COLOUR_I, linewidth=1,)
     band!(
         ax, saveat[2:end], [ y[1] for y ∈ plotvals ], [ y[3] for y ∈ plotvals ]; 
         color=( COLOUR_I, 0.5 )
