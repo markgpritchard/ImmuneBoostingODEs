@@ -102,30 +102,30 @@ critpsiplot = with_theme(theme_latexfonts()) do
     R0s = 0:0.1:17.5 
 
     md = [ 
-        [ rand(truncated(Normal(65, 3.3), 0, 80)), rand(truncated(Normal(15.25, 0.55), 1, 17.5)) ] 
-        for _ ∈ 1:15_000 
+        [ rand(truncated(Normal(65, 3), 0, 80)), rand(truncated(Normal(15.25, 0.5), 1, 17.5)) ] 
+        for _ ∈ 1:100_000 
     ]
     mp = [ 
-        [ rand(truncated(Normal(30, 3.3), 0, 80)), rand(truncated(Normal(14.65, 0.55), 1, 17.5)) ] 
-        for _ ∈ 1:15_000 
+        [ rand(truncated(Normal(30, 3), 0, 80)), rand(truncated(Normal(14.65, 0.5), 1, 17.5)) ] 
+        for _ ∈ 1:100_000 
     ]
     mv = [ 
-        [ rand(truncated(Normal(50, 3.3), 0, 80)), rand(truncated(Normal(8.75, 0.55), 1, 17.5)) ] 
-        for _ ∈ 1:15_000 
+        [ rand(truncated(Normal(50, 3), 0, 80)), rand(truncated(Normal(8.75, 0.5), 1, 17.5)) ] 
+        for _ ∈ 1:100_000 
     ]
     mr = [ 
-        [ rand(truncated(Normal(2.6, 2.2), 0, 80)), rand(truncated(Normal(3.5, 1.1), 1, 17.5)) ] 
-        for _ ∈ 1:15_000 
+        [ rand(truncated(Normal(2.6, 2), 0, 80)), rand(truncated(Normal(3.5, 1), 1, 17.5)) ] 
+        for _ ∈ 1:100_000 
     ]
 
     fig = Figure(; size = ( 500, 350 ))
     ax = Axis(fig[1, 1]; yticks=[ 0, 1, 5, 10, 15 ])
     cp = contourf!(ax, durations, R0s, critpsi'; levels=0:01:10, extendhigh=:auto)
     cb = Colorbar(fig[1, 2], cp)
-    scatter!(ax, Point2f.(md); markersize=1, color=( :red, 0.5 ), rasterize=2,)
-    scatter!(ax, Point2f.(mp); markersize=1, color=( :red, 0.5 ), rasterize=2,)
-    scatter!(ax, Point2f.(mv); markersize=1, color=( :red, 0.5 ), rasterize=2,)
-    scatter!(ax, Point2f.(mr); markersize=1, color=( :red, 0.5 ), rasterize=2,)
+    scatter!(ax, Point2f.(md); markersize=1, color=( :red, 0.2 ), rasterize=2,)
+    scatter!(ax, Point2f.(mp); markersize=1, color=( :red, 0.2 ), rasterize=2,)
+    scatter!(ax, Point2f.(mv); markersize=1, color=( :red, 0.2 ), rasterize=2,)
+    scatter!(ax, Point2f.(mr); markersize=1, color=( :red, 0.2 ), rasterize=2,)
     text!(ax, 65, 15.25; text="Measles", align=( :center, :center ), fontsize=10)
     text!(ax, 30, 14.65; text=L"$$\textit{B. pertussis}", align=( :center, :center ), fontsize=10)
     text!(ax, 50, 8.75; text="Varicella\nzoster", align=( :center, :center ), fontsize=10)
@@ -156,7 +156,6 @@ critpsiplot = with_theme(theme_latexfonts()) do
 end
 
 safesave(plotsdir("critpsiplot.pdf"), critpsiplot)
-
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -440,7 +439,7 @@ fittedparametersfig = with_theme(theme_latexfonts()) do
         hidex=true, hidexticks=true, hidey=true, hideyticks=true
     )
     Label(
-        ga[1:7, 0], "Simulated weekly incidence"; 
+        ga[1:7, 0], "Weekly incidence"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
     Label(ga[8, 1], "Year"; fontsize=11.84, tellwidth=false)
