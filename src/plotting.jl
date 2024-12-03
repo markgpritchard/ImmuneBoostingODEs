@@ -325,8 +325,10 @@ function _plotfouriera!(
     i = 1
     for (ax, freqs, densities) ∈ zip(axs, freqvector, densityvector)
         inds = findall(x -> .1 <= x <= 365 / 21, freqs) 
-        hm = heatmap!(ax, psis, freqs[inds], log10.(densities[inds, :]'); 
-            colormap = :CMRmap, colorrange = ( -6, 0 ))
+        hm = heatmap!(
+            ax, psis, freqs[inds], log10.(densities[inds, :]'); 
+            colormap = :CMRmap, colorrange = ( -6, 0 ), rasterize=10,
+        )
         ax.yticks = ( [.2, .5, 1, 2, 4, 365 / 35], [ "5 y", "2 y", "1 y", "6 m", "3 m", "5 w" ] )
         formataxis!(ax; hidex=true, hidey=(i != 1))
         if i == 1 
@@ -567,9 +569,19 @@ function plotrsvage!(fig, agedata)
         fig[1:4, 0], "Annual cumulative incidence"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
+    _formatplotrsvage!(fig)
+end
+
+function _formatplotrsvage!(fig::Figure)
     colgap!(fig.layout, 1, 5) 
     rowgap!(fig.layout, 3, 5) 
     rowgap!(fig.layout, 4, 5) 
+end
+
+function _formatplotrsvage!(gl::GridLayout)
+    colgap!(gl, 1, 5) 
+    rowgap!(gl, 3, 5) 
+    rowgap!(gl, 4, 5) 
 end
 
 

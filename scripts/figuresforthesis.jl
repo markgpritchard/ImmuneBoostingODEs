@@ -102,30 +102,30 @@ critpsiplot = with_theme(theme_latexfonts()) do
     R0s = 0:0.1:17.5 
 
     md = [ 
-        [ rand(truncated(Normal(65, 3), 0, 80)), rand(truncated(Normal(15.25, 0.5), 1, 17.5)) ] 
-        for _ ∈ 1:100_000 
+        [ rand(truncated(Normal(65, 3.3), 0, 80)), rand(truncated(Normal(15.25, 0.55), 1, 17.5)) ] 
+        for _ ∈ 1:15_000 
     ]
     mp = [ 
-        [ rand(truncated(Normal(30, 3), 0, 80)), rand(truncated(Normal(14.65, 0.5), 1, 17.5)) ] 
-        for _ ∈ 1:100_000 
+        [ rand(truncated(Normal(30, 3.3), 0, 80)), rand(truncated(Normal(14.65, 0.55), 1, 17.5)) ] 
+        for _ ∈ 1:15_000 
     ]
     mv = [ 
-        [ rand(truncated(Normal(50, 3), 0, 80)), rand(truncated(Normal(8.75, 0.5), 1, 17.5)) ] 
-        for _ ∈ 1:100_000 
+        [ rand(truncated(Normal(50, 3.3), 0, 80)), rand(truncated(Normal(8.75, 0.55), 1, 17.5)) ] 
+        for _ ∈ 1:15_000 
     ]
     mr = [ 
-        [ rand(truncated(Normal(2.6, 2), 0, 80)), rand(truncated(Normal(3.5, 1), 1, 17.5)) ] 
-        for _ ∈ 1:100_000 
+        [ rand(truncated(Normal(2.6, 2.2), 0, 80)), rand(truncated(Normal(3.5, 1.1), 1, 17.5)) ] 
+        for _ ∈ 1:15_000 
     ]
 
     fig = Figure(; size = ( 500, 350 ))
     ax = Axis(fig[1, 1]; yticks=[ 0, 1, 5, 10, 15 ])
     cp = contourf!(ax, durations, R0s, critpsi'; levels=0:01:10, extendhigh=:auto)
     cb = Colorbar(fig[1, 2], cp)
-    scatter!(ax, Point2f.(md); markersize=1, color=( :red, 0.2 ))
-    scatter!(ax, Point2f.(mp); markersize=1, color=( :red, 0.2 ))
-    scatter!(ax, Point2f.(mv); markersize=1, color=( :red, 0.2 ))
-    scatter!(ax, Point2f.(mr); markersize=1, color=( :red, 0.2 ))
+    scatter!(ax, Point2f.(md); markersize=1, color=( :red, 0.5 ), rasterize=2,)
+    scatter!(ax, Point2f.(mp); markersize=1, color=( :red, 0.5 ), rasterize=2,)
+    scatter!(ax, Point2f.(mv); markersize=1, color=( :red, 0.5 ), rasterize=2,)
+    scatter!(ax, Point2f.(mr); markersize=1, color=( :red, 0.5 ), rasterize=2,)
     text!(ax, 65, 15.25; text="Measles", align=( :center, :center ), fontsize=10)
     text!(ax, 30, 14.65; text=L"$$\textit{B. pertussis}", align=( :center, :center ), fontsize=10)
     text!(ax, 50, 8.75; text="Varicella\nzoster", align=( :center, :center ), fontsize=10)
@@ -174,7 +174,7 @@ equilibriumplot = with_theme(theme_latexfonts()) do
         row=5
     )
     rowsize!(ga, 5, Auto(2.25))
-    labelplots!([ "A", "B" ], ga; rows=[ 0, 5 ])
+    labelplots!([ "A", "B" ], ga; rows=[ 0, 5 ], padding =( 0, 5, 2, 0 ))
     fig
 end
 
@@ -220,8 +220,10 @@ rsvcases = with_theme(theme_latexfonts()) do
     reduceday = crgtdata.Date[inds[1]]
     increaseday = crgtdata.Date[last(inds)]
 
-    fig = Figure(; size = ( 500, 200 ))
-    ax = Axis(fig[1, 1]; xticks=[ 2017, 2019, 2021, 2023 ])
+    fig = Figure(; size = ( 500, 500 ))
+    ga = GridLayout(fig[1, 1])
+    gb = GridLayout(fig[2, 1])
+    ax = Axis(ga[1, 1]; xticks=[ 2017, 2019, 2021, 2023 ])
     lines!(ax, saveat[2:end], data.Cases; color=:black, linewidth=1,)
     vspan!(ax, reduceday, increaseday, color=( :gray, 0.1 ))
     for x ∈ 2017:1:2023
@@ -231,14 +233,27 @@ rsvcases = with_theme(theme_latexfonts()) do
         )
     end
     formataxis!(ax; trimspines=true, hidespines=( :t, :r ))
-    Label(fig[1, 0], "Weekly incidence"; fontsize=11.84, rotation=π/2, tellheight=false)
-    Label(fig[2, 1], "Year"; fontsize=11.84, tellwidth=false)
-    colgap!(fig.layout, 1, 5)
-    rowgap!(fig.layout, 1, 5)
+    Label(ga[1, 0], "Weekly incidence"; fontsize=11.84, rotation=π/2, tellheight=false)
+    Label(ga[2, 1], "Year"; fontsize=11.84, tellwidth=false)
+    colgap!(ga, 1, 5)
+    rowgap!(ga, 1, 5)
+
+    plotrsvage!(gb, agedata)
+
+    labelplots!([ "A", "B" ], [ ga, gb ], rows=1)
+    rowsize!(fig.layout, 1, Auto(0.5))
+
     fig
 end
 
 safesave(plotsdir("rsvcases.pdf"), rsvcases)
+
+rsvagefigure = with_theme(theme_latexfonts()) do 
+    fig = Figure(; size = ( 500, 350 ))
+    fig
+end
+
+safesave(plotsdir("rsvagefigure.pdf"), rsvagefigure)
 
 
 
@@ -438,15 +453,15 @@ fittedparametersfig = with_theme(theme_latexfonts()) do
     end
     Label(gb[1, 0], L"Mean $\mathcal{R}_0$"; fontsize=11.84, rotation=π/2, tellheight=false)
     Label(
-        gb[2, 0], "Magnitude of\nseasonal forcing, %"; 
+        gb[2, 0], "Magnitude of\n forcing, %"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
     Label(
-        gb[3, 0], "ψ"; 
+        gb[3, 0], L"$\psi$"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
     Label(
-        gb[4, 0], "Transmission reduction from\ninterventions, %"; 
+        gb[4, 0], "Effect of\ninterventions, %"; 
         fontsize=11.84, rotation=π/2, tellheight=false
     )
     Label(
@@ -493,10 +508,3 @@ safesave(plotsdir("npisimulationplot.pdf"), npisimulationplot)
 # Age-stratified respiratory syncytial virus data  
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-rsvagefigure = with_theme(theme_latexfonts()) do 
-    fig = Figure(; size = ( 500, 350 ))
-    plotrsvage!(fig, agedata)
-    fig
-end
-
-safesave(plotsdir("rsvagefigure.pdf"), rsvagefigure)
