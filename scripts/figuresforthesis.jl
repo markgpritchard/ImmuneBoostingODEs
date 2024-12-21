@@ -24,7 +24,7 @@ include("displayrsvanalysis.jl") # provides data, rsvsim_psi0, rsvsim_psi5, rsvs
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 introplot = let 
-    fig = Figure(; size=( 500, 100 ))
+    fig = Figure(; size=( 400, 100 ))
     lt1 = LTeX(
         fig[1, 1], 
         TeXDocument(read(scriptsdir("tikz_sirrrs.tex"), String)); 
