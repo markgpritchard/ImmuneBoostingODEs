@@ -97,7 +97,7 @@ function fittedsimulationsetup(saveat)
 end
 
 function runfittedsimulations(df, omega, saveat, cbs)
-    modelmat = Matrix{Float64}(undef, length(saveat) - 1, size(df, 1))
+    modelmat = Matrix{Union{Missing, Float64}}(missing, length(saveat) - 1, size(df, 1))
     prob = fittedsimulationsetup(saveat)
     for i ∈ axes(df, 1)
         p = SirnsParameters(
@@ -118,6 +118,7 @@ function runfittedsimulations(df, omega, saveat, cbs)
             p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=1e8, 
         )
         cumulativecases = modelcompartments(sol, :cc)
+        sol.retcode != :Success && continue
         modelmat[:, i] = casespertimeblock(cumulativecases) .* 5_450_000 .* df.detection[i]
     end
     return modelmat
@@ -126,7 +127,7 @@ end
 function fittedsimulationquantiles(
     modelmat::AbstractMatrix, quantiles::AbstractVector=[ 0.05, 0.5, 0.95 ]
 )
-    return [ quantile(modelmat[i, :], quantiles) for i ∈ axes(modelmat, 1) ]
+    return [ quantile(skipmissing(modelmat[i, :]), quantiles) for i ∈ axes(modelmat, 1) ]
 end
 
 function fittedsimulationquantiles(
