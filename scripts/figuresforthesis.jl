@@ -468,6 +468,80 @@ safesave(plotsdir("priordistributionfig.pdf"), priordistributionfig)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Respiratory syncytial virus chains
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+for (df, id) ∈ zip(
+    [
+        rsvparameters01, rsvparameters02, rsvparameters04, 
+        rsvparameters1, rsvparameters2, rsvparameters4, rsvparameters6 
+    ],
+    [ "01", "02", "04", "1", "2", "4", "6" ]
+)
+    fig = with_theme(theme_latexfonts()) do  
+        _names = [
+            "log density",
+            L"$\beta_0$",
+            L"$\beta_1$",
+            L"$\varphi$",
+            L"$\psi$",
+            L"$\beta^{\prime}_1$",
+            L"$\beta^{\prime}_2$",
+            "proportion diagnosed",
+        ]
+
+        fig = Figure(; size=( 500, 700 ))
+        axs1 = [ 
+            Axis(fig[i, 2*j-1], xticks=WilkinsonTicks(3), yticks=WilkinsonTicks(3)) 
+            for i ∈ 1:8, j ∈ 1:2 
+        ]
+
+        for i ∈ 5:-1:1
+            _tdf = filter(:chain => x -> x == i, df)
+            if length(_tdf.log_density) > 0
+                lines!(
+                    axs1[1, 1], _tdf.iteration, _tdf.log_density; 
+                    color=COLOURVECTOR[i], linewidth=1,
+                )
+                density!(
+                    axs1[1, 2], _tdf.log_density; 
+                    color=( :white, 0 ), strokecolor=COLOURVECTOR[i], strokewidth=1,
+                )
+            end
+            for (j, v) ∈ enumerate(names(_tdf)[3:9])
+                if length(getproperty(_tdf, v)) > 0
+                    lines!(
+                        axs1[1+j, 1], _tdf.iteration, getproperty(_tdf, v); 
+                        color=COLOURVECTOR[i], linewidth=1,
+                    )
+                    density!(
+                        axs1[1+j, 2], getproperty(_tdf, v); 
+                        color=( :white, 0 ), strokecolor=COLOURVECTOR[i], strokewidth=1,
+                    )
+                end
+            end
+        end
+
+        for i ∈ 1:8, j ∈ 1:2
+            formataxis!(axs1[i, j]; hidespines=( :r, :t ), trimspines=true,)
+            #Label(fig[i, 1], "Iteration"; fontsize=11.84, tellwidth=false)
+            Label(fig[i, 2], "Density"; fontsize=11.84, rotation=π/2, tellheight=false,)
+            Label(fig[i, 0], _names[i]; fontsize=11.84, rotation=π/2, tellheight=false,)
+        end
+
+        Label(fig[9, 1], "Iteration"; fontsize=11.84, tellwidth=false,)
+        for c ∈ [ 1, 3 ] colgap!(fig.layout, c, 5) end
+        rowgap!(fig.layout, 8, 5)
+
+        fig
+    end
+
+    safesave(plotsdir("rsvchain$id.pdf"), fig)
+end
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Respiratory syncytial virus data with simulations
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -699,4 +773,3 @@ plotnpi!(npisimulationplot, npisim_phi0, npisim_phi5, npisim_phi13_2, npiparms)
 
 npisimulationplot
 safesave(plotsdir("npisimulationplot.pdf"), npisimulationplot)
-
