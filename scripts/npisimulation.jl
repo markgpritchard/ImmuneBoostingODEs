@@ -12,7 +12,7 @@ using DifferentialEquations
 # number of values in global scope potentially leading to unexpected results
 npiparms = let 
     γ = 48.7    # generation time 7.5 days
-    μ = .0087   # Scotland's birth rate = 48000 / 5.5e6
+    μ = 0.0087   # Scotland's birth rate = 48000 / 5.5e6
     tspan = ( -1000.65, 10.0 ) 
     βreduction = 0.8
     reductiontime = 5.2

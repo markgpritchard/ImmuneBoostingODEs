@@ -11,7 +11,7 @@ using DrWatson
 
 simparms = let 
     γ = 48.7    # generation time 7.5 days
-    μ = .0087   # Scotland's birth rate = 48000 / 5.5e6
+    μ = 0.0087   # Scotland's birth rate = 48000 / 5.5e6
     psis = collect(0:0.1:20)
     R0 = 1.6
     @ntuple γ μ psis R0

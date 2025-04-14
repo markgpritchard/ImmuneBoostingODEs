@@ -14,9 +14,9 @@ using DrWatson
 
 equilparms = let 
     γ       = 48.7    # generation time 7.5 days
-    μ       = .0087   # Scotland's birth rate = 48_000 / 5.5e6
+    μ       = 0.0087   # Scotland's birth rate = 48_000 / 5.5e6
     psis    = collect(0:.1:20)
-    ω       = .913    # mean duration of immunity without boosting 400 days 
+    ω       = 0.913    # mean duration of immunity without boosting 400 days 
     durations = [ collect(.01:.01:2.5); collect(2.5:.1:80) ] # Used for plotting 
     # effect of changing mean duration of immunity. Set to provide finer resolution 
     # for first 2.5 years
