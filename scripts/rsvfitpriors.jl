@@ -41,6 +41,6 @@ priorsvector = [
 ]
 
 priorsvalues = [
-    fittedsimulationquantiles(DataFrame(p), omega, saveat, cbs)
+    fittedsimulationquantiles(DataFrame(p), omega, saveat, cbs, [ 0.025, 0.5, 0.975 ])
     for (p, omega) ∈ zip(priorsvector, [ 0.1, 0.2, 0.4, 1.0, 2.0, 4.0, 6.0 ])
 ]

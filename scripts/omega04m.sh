@@ -7,10 +7,10 @@
 #SBATCH --mail-user=mark.pritchard@ndm.ox.ac.uk
 
 export JULIA_NUM_THREADS=36
-module load Julia/1.9.3-linux-x86_64
+module load Julia/1.11.3-linux-x86_64
 
 omega=0.4
-n_rounds=12
+n_rounds=14
 
 for n in {1..5}
 do

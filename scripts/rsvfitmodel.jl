@@ -1,7 +1,7 @@
 
 @model function fitmodel(
     incidence, prob, cbs, saveat;
-    betazeroprior=Exponential(150),  # truncated at R0 = 100
+    betazeroprior=Exponential(150),
     betaoneprior=Uniform(0, 0.9),
     phiprior=Uniform(-π, π),
     psiprior=Exponential(1),

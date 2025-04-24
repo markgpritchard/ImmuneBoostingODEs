@@ -25,17 +25,22 @@ end
 # Duration of immunity 6 months 
 unforced6mfreqs, unforced6mdensities = let 
     @unpack γ, μ, psis, R0 = simparms
-    immuneduration = .5
+    immuneduration = 0.5
     β0 = R0 * (γ + μ)
     ω = 1 / immuneduration 
     β1 = ϕ = 0 
-    tspan = ( -1000., 20. )
+    tspan = ( -1000.0, 20.0 )
     kw = @ntuple tspan
-    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(undef, length(psis))
-    for (i, ψ) ∈ enumerate(psis)
+    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(
+        undef, length(psis)
+    )
+    Threads.@threads for i ∈ eachindex(psis)
+        ψ = psis[i]
         config = @dict β0 β1 ϕ γ μ ψ ω kw
-        pl_result = produce_or_load(pl_modelincidence, config, datadir("sims"); 
-            prefix = "pl_modelincidence")
+        pl_result = produce_or_load(
+            pl_modelincidence, config, datadir("sims"); 
+            prefix="pl_modelincidence"
+        )
         @unpack gt, incidence = pl_result[1]
         results[i] = @ntuple gt incidence
     end
@@ -43,10 +48,36 @@ unforced6mfreqs, unforced6mdensities = let
 end 
 
 let 
-    r = findfirst(x -> x >= 1, unforced6mfreqs) # row of `unforced6mdensities` with a period of 1 year
+    # row of `unforced6mdensities` with a period of 1 year
+    r = findfirst(x -> x >= 1, unforced6mfreqs) 
     i = findmax(unforced6mdensities[r, :])
     println("The unforced model has an annual period when ψ = $(collect(0:.1:20)[i[2]])")
 end
+
+# Duration of immunity 1 year
+unforced365dfreqs, unforced365ddensities = let 
+    @unpack γ, μ, psis, R0 = simparms
+    immuneduration = 1
+    β0 = R0 * (γ + μ)
+    ω = 1 / immuneduration 
+    β1 = ϕ = 0.0  
+    tspan = ( -1000.0, 20.0 )
+    kw = @ntuple tspan
+    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(
+        undef, length(psis)
+    )
+    Threads.@threads for i ∈ eachindex(psis)
+        ψ = psis[i]
+        config = @dict β0 β1 ϕ γ μ ψ ω kw
+        pl_result = produce_or_load(
+            pl_modelincidence, config, datadir("sims"); 
+            prefix="pl_modelincidence"
+        )
+        @unpack gt, incidence = pl_result[1]
+        results[i] = @ntuple gt incidence
+    end
+    fourierhmdata(results)
+end 
 
 # Duration of immunity 400 days
 unforced400dfreqs, unforced400ddensities = let 
@@ -54,15 +85,19 @@ unforced400dfreqs, unforced400ddensities = let
     immuneduration = 400 / 365.25
     β0 = R0 * (γ + μ)
     ω = 1 / immuneduration 
-    β1 = ϕ = 0  
-    tspan = ( -1000., 20. )
+    β1 = ϕ = 0.0  
+    tspan = ( -1000.0, 20.0 )
     kw = @ntuple tspan
-    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(undef, length(psis))
-    for (i, ψ) ∈ enumerate(psis)
+    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(
+        undef, length(psis)
+    )
+    Threads.@threads for i ∈ eachindex(psis)
+        ψ = psis[i]
         config = @dict β0 β1 ϕ γ μ ψ ω kw
-        pl_result = produce_or_load(pl_modelincidence, config, datadir("sims"); 
-            #filename = hash, 
-            prefix = "pl_modelincidence")
+        pl_result = produce_or_load(
+            pl_modelincidence, config, datadir("sims"); 
+            prefix="pl_modelincidence"
+        )
         @unpack gt, incidence = pl_result[1]
         results[i] = @ntuple gt incidence
     end
@@ -75,14 +110,19 @@ unforced25freqs, unforced25densities = let
     immuneduration = 2.5
     β0 = R0 * (γ + μ)
     ω = 1 / immuneduration 
-    β1 = ϕ = 0  
-    tspan = ( -1000., 20. )
+    β1 = ϕ = 0.0  
+    tspan = ( -1000.0, 20.0 )
     kw = @ntuple tspan
-    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(undef, length(psis))
-    for (i, ψ) ∈ enumerate(psis)
+    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(
+        undef, length(psis)
+    )
+    Threads.@threads for i ∈ eachindex(psis)
+        ψ = psis[i]
         config = @dict β0 β1 ϕ γ μ ψ ω kw
-        pl_result = produce_or_load(pl_modelincidence, config, datadir("sims"); 
-            prefix = "pl_modelincidence")
+        pl_result = produce_or_load(
+            pl_modelincidence, config, datadir("sims"); 
+            prefix="pl_modelincidence"
+            )
         @unpack gt, incidence = pl_result[1]
         results[i] = @ntuple gt incidence
     end
@@ -100,15 +140,55 @@ forced6mfreqs, forced6mdensities, forced6mmins, forced6mmaxs = let
     immuneduration = .5
     β0 = R0 * (γ + μ)
     ω = 1 / immuneduration 
-    β1 = .1
-    ϕ = 0 
-    tspan = ( -1000., 20. )
+    β1 = 0.1
+    ϕ = 0.0 
+    tspan = ( -1000.0, 20.0 )
     kw = @ntuple tspan
-    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(undef, length(psis))
-    for (i, ψ) ∈ enumerate(psis)
+    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(
+        undef, length(psis)
+    )
+    Threads.@threads for i ∈ eachindex(psis)
+        ψ = psis[i]
         config = @dict β0 β1 ϕ γ μ ψ ω kw
-        pl_result = produce_or_load(pl_modelincidence, config, datadir("sims"); 
-            prefix = "pl_modelincidence")
+        pl_result = produce_or_load(
+            pl_modelincidence, config, datadir("sims"); 
+            prefix="pl_modelincidence"
+        )
+        @unpack gt, incidence = pl_result[1]
+        results[i] = @ntuple gt incidence
+    end
+    @unpack freq_overall, densities = fourierhmdata(results)
+
+    # Calculate values for bifurcation plot 
+    mins = Vector{Float64}(undef, length(psis))
+    maxs = Vector{Float64}(undef, length(psis))
+    for i ∈ eachindex(psis) 
+        mins[i] = minimum(results[i].incidence)
+        maxs[i] = maximum(results[i].incidence)
+    end 
+    ( freq_overall, densities, mins, maxs )
+end 
+
+# Duration of immunity 1 year
+forced365dfreqs, forced365ddensities, forced365dmins, forced365dmaxs = let 
+    @unpack γ, μ, psis, R0 = simparms
+    immuneduration = 1
+    β0 = R0 * (γ + μ)
+    ω = 1 / immuneduration 
+    β1 = 0.1
+    ϕ = 0.0 
+    tspan = ( -1000.0, 20.0 )
+    kw = @ntuple tspan
+    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(
+        undef, length(psis)
+    )
+    Threads.@threads for i ∈ eachindex(psis)
+        ψ = psis[i]
+        config = @dict β0 β1 ϕ γ μ ψ ω kw
+        pl_result = produce_or_load(
+            pl_modelincidence, config, datadir("sims"); 
+            prefix="pl_modelincidence"
+        )
         @unpack gt, incidence = pl_result[1]
         results[i] = @ntuple gt incidence
     end
@@ -130,15 +210,20 @@ forced400dfreqs, forced400ddensities, forced400dmins, forced400dmaxs = let
     immuneduration = 400 / 365.25
     β0 = R0 * (γ + μ)
     ω = 1 / immuneduration 
-    β1 = .1
-    ϕ = 0 
-    tspan = ( -1000., 20. )
+    β1 = 0.1
+    ϕ = 0.0 
+    tspan = ( -1000.0, 20.0 )
     kw = @ntuple tspan
-    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(undef, length(psis))
-    for (i, ψ) ∈ enumerate(psis)
+    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(
+        undef, length(psis)
+    )
+    Threads.@threads for i ∈ eachindex(psis)
+        ψ = psis[i]
         config = @dict β0 β1 ϕ γ μ ψ ω kw
-        pl_result = produce_or_load(pl_modelincidence, config, datadir("sims"); 
-            prefix = "pl_modelincidence")
+        pl_result = produce_or_load(
+            pl_modelincidence, config, datadir("sims"); 
+            prefix="pl_modelincidence"
+        )
         @unpack gt, incidence = pl_result[1]
         results[i] = @ntuple gt incidence
     end
@@ -160,15 +245,20 @@ forced25freqs, forced25densities, forced25mins, forced25maxs = let
     immuneduration = 2.5
     β0 = R0 * (γ + μ)
     ω = 1 / immuneduration 
-    β1 = .1
-    ϕ = 0 
-    tspan = ( -1000., 20. )
+    β1 = 0.1
+    ϕ = 0.0 
+    tspan = ( -1000.0, 20.0 )
     kw = @ntuple tspan
-    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(undef, length(psis))
-    for (i, ψ) ∈ enumerate(psis)
+    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(
+        undef, length(psis)
+    )
+    Threads.@threads for i ∈ eachindex(psis)
+        ψ = psis[i]
         config = @dict β0 β1 ϕ γ μ ψ ω kw
-        pl_result = produce_or_load(pl_modelincidence, config, datadir("sims"); 
-            prefix = "pl_modelincidence")
+        pl_result = produce_or_load(
+            pl_modelincidence, config, datadir("sims"); 
+            prefix="pl_modelincidence"
+        )
         @unpack gt, incidence = pl_result[1]
         results[i] = @ntuple gt incidence
     end

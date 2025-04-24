@@ -17,9 +17,9 @@ equilparms = let
     μ       = 0.0087   # Scotland's birth rate = 48_000 / 5.5e6
     psis    = collect(0:.1:20)
     ω       = 0.913    # mean duration of immunity without boosting 400 days 
-    durations = [ collect(.01:.01:2.5); collect(2.5:.1:80) ] # Used for plotting 
-    # effect of changing mean duration of immunity. Set to provide finer resolution 
-    # for first 2.5 years
+    durations = [ collect(.01:.001:0.5); collect(.05:.01:2.5); collect(2.5:.1:80) ] 
+    # Used for plotting effect of changing mean duration of immunity. Set to provide finer
+    # resolution for smaller durations
     R0s     = collect(.0125:.025:15)
     @ntuple γ μ psis ω durations R0s
 end
@@ -38,17 +38,20 @@ let
     global equilSs = zeros(length(betas), length(psis))
     global equilIs = zeros(length(betas), length(psis))
     global equilRs = zeros(length(betas), length(psis))
-    for (i, β) ∈ enumerate(betas), (j, ϕ) ∈ enumerate(psis)
-        I = equili(SirnsParameters(β, γ, μ, ϕ, ω))
-        if 0 < I <= 1   # endemic equilibrium
-            equilSs[i, j] = equils(SirnsParameters(β, γ, μ, ϕ, ω))
-            equilIs[i, j] = I
-            equilRs[i, j] = equilr(SirnsParameters(β, γ, μ, ϕ, ω), I) 
-        else            # disease-free equilibium
-            equilSs[i, j] = 1.
-            equilIs[i, j] = .0
-            equilRs[i, j] = .0
-        end 
+    Threads.@threads for i ∈ eachindex(betas)
+        β = betas[i]
+        for (j, ϕ) ∈ enumerate(psis)
+            I = equili(SirnsParameters(β, γ, μ, ϕ, ω))
+            if 0 < I <= 1   # endemic equilibrium
+                equilSs[i, j] = equils(SirnsParameters(β, γ, μ, ϕ, ω))
+                equilIs[i, j] = I
+                equilRs[i, j] = equilr(SirnsParameters(β, γ, μ, ϕ, ω), I) 
+            else            # disease-free equilibium
+                equilSs[i, j] = 1.
+                equilIs[i, j] = .0
+                equilRs[i, j] = .0
+            end 
+        end
     end 
 end 
 
@@ -75,8 +78,9 @@ critpsi = let
     R0s = 0:0.1:17.5 
     betas = R0s .* (γ + μ)
     omegas = 1 ./ durations
-    outputs = zeros(176, 1026)
-    for (i, beta) ∈ enumerate(betas) 
+    outputs = zeros(length(R0s), length(durations))
+    Threads.@threads for i ∈ eachindex(betas)
+        beta = betas[i]
         for (j, omega) ∈ enumerate(omegas)
             outputs[i, j] = findpsi(beta, γ, μ, omega; warntol=Inf)
         end
@@ -224,8 +228,10 @@ bifurcationI_1_5 = let
     @unpack γ, μ, psis, ω = equilparms
     R0 = 1.5
     config = @dict R0 γ μ psis ω
-    d = produce_or_load(pl_bifurcationlimits, config, datadir("sims"); 
-        prefix = "pl_bifurcationlimits")
+    d = produce_or_load(
+        pl_bifurcationlimits, config, datadir("sims"); 
+        prefix = "pl_bifurcationlimits"
+    )
     dict2ntuple(d[1])
 end
 
@@ -233,8 +239,10 @@ bifurcationI_5 = let
     @unpack γ, μ, psis, ω = equilparms
     R0 = 5
     config = @dict R0 γ μ psis ω maxiters = 1e6
-    d = produce_or_load(pl_bifurcationlimits, config, datadir("sims"); 
-        prefix = "pl_bifurcationlimits")
+    d = produce_or_load(
+        pl_bifurcationlimits, config, datadir("sims"); 
+        prefix = "pl_bifurcationlimits"
+    )
     dict2ntuple(d[1])
 end
 
@@ -242,8 +250,10 @@ bifurcationI_10 = let
     @unpack γ, μ, psis, ω = equilparms
     R0 = 10
     config = @dict R0 γ μ psis ω maxiters = 1e6
-    d = produce_or_load(pl_bifurcationlimits, config, datadir("sims"); 
-        prefix = "pl_bifurcationlimits")
+    d = produce_or_load(
+        pl_bifurcationlimits, config, datadir("sims"); 
+        prefix = "pl_bifurcationlimits"
+    )
     dict2ntuple(d[1])
 end
 
@@ -251,7 +261,9 @@ bifurcationI_15 = let
     @unpack γ, μ, psis, ω = equilparms
     R0 = 15
     config = @dict R0 γ μ psis ω maxiters = 1e6
-    d = produce_or_load(pl_bifurcationlimits, config, datadir("sims"); 
-        prefix = "pl_bifurcationlimits")
+    d = produce_or_load(
+        pl_bifurcationlimits, config, datadir("sims"); 
+        prefix = "pl_bifurcationlimits"
+    )
     dict2ntuple(d[1])
 end

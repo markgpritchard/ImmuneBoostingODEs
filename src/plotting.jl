@@ -81,15 +81,19 @@ end
 function plotfourier!(
     fig, 
     unforced6mfreqs, 
+    unforced365dfreqs,
     unforced400dfreqs, 
     unforced25freqs, 
     unforced6mdensities, 
+    unforced365ddensities,
     unforced400ddensities, 
     unforced25densities, 
     forced6mfreqs, 
+    forced365dfreqs,
     forced400dfreqs, 
     forced25freqs, 
     forced6mdensities, 
+    forced365ddensities,
     forced400ddensities, 
     forced25densities, 
     simparms
@@ -104,9 +108,11 @@ function plotfourier!(
     _plotfouriera!(
         gl, 
         unforced6mfreqs, 
+        unforced365dfreqs,
         unforced400dfreqs, 
         unforced25freqs, 
         unforced6mdensities, 
+        unforced365ddensities,
         unforced400ddensities, 
         unforced25densities, 
         simparms
@@ -114,9 +120,11 @@ function plotfourier!(
     _plotfourierb!(
         gl, 
         forced6mfreqs, 
+        forced365dfreqs,
         forced400dfreqs, 
         forced25freqs, 
         forced6mdensities, 
+        forced365ddensities,
         forced400ddensities, 
         forced25densities, 
         simparms
@@ -130,18 +138,20 @@ end
 function _plotfouriera!(
     gl, 
     unforced6mfreqs, 
+    unforced365dfreqs,
     unforced400dfreqs, 
     unforced25freqs, 
     unforced6mdensities, 
+    unforced365ddensities,
     unforced400ddensities, 
     unforced25densities, 
     simparms
 )
     @unpack psis = simparms
-    freqvector = [ unforced6mfreqs, unforced400dfreqs, unforced25freqs ]
-    densityvector = [ unforced6mdensities, unforced400ddensities, unforced25densities ]
+    freqvector = [ unforced6mfreqs, unforced365dfreqs, unforced400dfreqs, unforced25freqs ]
+    densityvector = [ unforced6mdensities, unforced365ddensities, unforced400ddensities, unforced25densities ]
 
-    axs = [ Axis(gl[1, i]; yscale=log) for i ∈ 1:3 ]
+    axs = [ Axis(gl[1, i]; yscale=log) for i ∈ 1:4 ]
     i = 1
     for (ax, freqs, densities) ∈ zip(axs, freqvector, densityvector)
         inds = findall(x -> .1 <= x <= 365 / 21, freqs) 
@@ -172,18 +182,20 @@ end
 function _plotfourierb!(
     gl, 
     forced6mfreqs, 
+    forced365dfreqs,
     forced400dfreqs, 
     forced25freqs, 
     forced6mdensities, 
+    forced365ddensities,
     forced400ddensities, 
     forced25densities, 
     simparms
 ) 
     @unpack psis = simparms
-    freqvector = [ forced6mfreqs, forced400dfreqs, forced25freqs ]
-    densityvector = [ forced6mdensities, forced400ddensities, forced25densities ]
+    freqvector = [ forced6mfreqs, forced365dfreqs, forced400dfreqs, forced25freqs ]
+    densityvector = [ forced6mdensities, forced365ddensities, forced400ddensities, forced25densities ]
 
-    axs = [ Axis(gl[2, i]; yscale=log) for i ∈ 1:3 ]
+    axs = [ Axis(gl[2, i]; yscale=log) for i ∈ 1:4 ]
     i = 1
     for (ax, freqs, densities) ∈ zip(axs, freqvector, densityvector)
         inds = findall(x -> 0.1 <= x <= 365 / 21, freqs) 
@@ -199,7 +211,7 @@ function _plotfourierb!(
         i += 1
     end
     Label(
-        gl[3, 1:3], L"Boosting coefficient, $\omega$"; 
+        gl[3, 1:3], L"Boosting coefficient, $\psi$"; 
         fontsize=11.84, tellwidth=false
     )
 end

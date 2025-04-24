@@ -140,7 +140,14 @@ npisim_phi13_2 = let
 
     sol = solve(
         prob, Vern9(lazy=false); 
-        p, u0, tspan, callback=cbs, saveat=simulateddates, abstol=1e-15, reltol=1e-15, maxiters=5e6,
+        p, 
+        u0, 
+        tspan, 
+        callback=cbs, 
+        saveat=simulateddates, 
+        abstol=1e-15, 
+        reltol=1e-15, 
+        maxiters=5e6,
     )
     compartments = modelcompartments(sol, p)
     cases = casespertimeblock(compartments[:cc]) * 5_500_000 * θ

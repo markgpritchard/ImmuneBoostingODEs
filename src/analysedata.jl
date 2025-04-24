@@ -23,14 +23,6 @@ function fouriervalues(values, dt::Real, n::Int)
     return (freq = freq[inds], spectraldensity = spectraldensity[inds])
 end 
 
-"""
-    fourierhmdata(modeloutputs)
-
-Performs fast Fourier transform and returns a `NamedTuple` of frequencies and densities.
-
-`modeloutputs` is a `NamedTuple` containing `gt`, times points from a simulation, 
-    and `incidence`, a vector of incidence from a simulation.
-"""
 function fourierhmdata(modeloutputs) 
     @unpack freq, spectraldensity = fouriervalues(modeloutputs[1])
     freq_overall = deepcopy(freq)
@@ -131,7 +123,10 @@ function fittedsimulationquantiles(
 end
 
 function fittedsimulationquantiles(
-    df::DataFrame, omega::Number, saveat::AbstractVector, cbs, 
+    df::DataFrame, 
+    omega::Number, 
+    saveat::AbstractVector, 
+    cbs, 
     quantiles::AbstractVector=[ 0.05, 0.5, 0.95 ]
 )
     modelmat = runfittedsimulations(df, omega, saveat, cbs)

@@ -101,62 +101,41 @@ critpsiplot = with_theme(theme_latexfonts()) do
     @unpack γ, μ, durations = equilparms
     R0s = 0:0.1:17.5 
 
-    md = [ 
-        [ 
-            rand(truncated(Normal(65, 3), 0, 80)), 
-            rand(truncated(Normal(15.25, 0.5), 1, 17.5)) 
-        ] 
-        for _ ∈ 1:100_000 
-    ]
-    mp = [ 
-        [ 
-            rand(truncated(Normal(30, 3), 0, 80)), 
-            rand(truncated(Normal(14.65, 0.5), 1, 17.5)) 
-        ] 
-        for _ ∈ 1:100_000 
-    ]
-    mv = [ 
-        [ 
-            rand(truncated(Normal(50, 3), 0, 80)), 
-            rand(truncated(Normal(8.75, 0.5), 1, 17.5)) 
-        ] 
-        for _ ∈ 1:100_000 
-    ]
-    mr = [ 
-        [ 
-            rand(truncated(Normal(2.6, 2), 0, 80)), 
-            rand(truncated(Normal(3.5, 1), 1, 17.5)) 
-        ] 
-        for _ ∈ 1:100_000 
-    ]
-
     fig = Figure(; size = ( 500, 350 ))
-    ax = Axis(fig[1, 1]; yticks=[ 0, 1, 5, 10, 15 ])
+    ax = Axis(
+        fig[1, 1]; 
+        xscale=log, 
+        xticks=(
+            [ 1/6, 0.5, 1, 2, 5, 10, 20, 50 ],
+            [ "2/12", "6/12", "1", "2", "5", "10", "20", "50" ]
+        ),
+        yticks=[ 0, 5, 10, 15 ],
+    )
     cp = contourf!(ax, durations, R0s, critpsi'; levels=0:01:10, extendhigh=:auto)
     cb = Colorbar(fig[1, 2], cp)
-    scatter!(ax, Point2f.(md); markersize=1, color=( :red, 0.2 ), rasterize=2,)
-    scatter!(ax, Point2f.(mp); markersize=1, color=( :red, 0.2 ), rasterize=2,)
-    scatter!(ax, Point2f.(mv); markersize=1, color=( :red, 0.2 ), rasterize=2,)
-    scatter!(ax, Point2f.(mr); markersize=1, color=( :red, 0.2 ), rasterize=2,)
     text!(
         ax, 65, 15.25; 
-        text="Measles", align=( :center, :center ), fontsize=10,
+        text="Measles", 
+        align=( :center, :center ), fontsize=10,
     )
     text!(
         ax, 30, 14.65; 
-        text=L"$$\textit{B. pertussis}", align=( :center, :center ), fontsize=10,
+        text=L"$$\textit{Bordetella} \\ \textit{pertussis}", 
+        align=( :center, :center ), fontsize=10,
     )
     text!(
         ax, 50, 8.75; 
-        text="Varicella\nzoster", align=( :center, :center ), fontsize=10,
+        text="Varicella\nzoster", 
+        align=( :center, :center ), fontsize=10,
     )
     text!(
-        ax, 2.6, 3.5; 
-        text="Respiratory\nviruses", align=( :center, :center ), fontsize=10, rotation=3π/2,
+        ax, 1.5, 3; 
+        text="Respiratory\nviruses", 
+        align=( :center, :center ), color=:white, fontsize=10, 
     )
     hlines!(ax, 1; color=RGBAf(0, 0, 0, 0.12), linestyle=( :dot, :dense ), linewidth =1,)
 
-    formataxis!(ax; setpoint=( 0, 1 ), trimspines=true, hidespines=( :r, :t ))
+    formataxis!(ax; setpoint=( 0.5, 0 ), trimspines=true, hidespines=( :r, :t ))
     formataxis!(cb)
 
     Label(
@@ -347,8 +326,8 @@ fittedparametersfig = with_theme(theme_latexfonts()) do
     rangebars!(
         ax2, 
         logomegavalues, 
-        log.([ quantile(v.β0, 0.05) for v ∈ pv ] ./ (γ + μ)), 
-        log.([ quantile(v.β0, 0.95) for v ∈ pv ] ./ (γ + μ));
+        log.([ quantile(v.β0, 0.025) for v ∈ pv ] ./ (γ + μ)), 
+        log.([ quantile(v.β0, 0.975) for v ∈ pv ] ./ (γ + μ));
         color=:blue,
     )
     for y ∈ [ 1, 2, 5, 10, 20, 40 ]
@@ -373,8 +352,8 @@ fittedparametersfig = with_theme(theme_latexfonts()) do
     rangebars!(
         ax3, 
         logomegavalues, 
-        100 .* [ quantile(v.β1, 0.05) for v ∈ pv ], 
-        100 .* [ quantile(v.β1, 0.95) for v ∈ pv ];
+        100 .* [ quantile(v.β1, 0.025) for v ∈ pv ], 
+        100 .* [ quantile(v.β1, 0.975) for v ∈ pv ];
         color=:blue,
     )
     ax4 = Axis(
@@ -392,8 +371,8 @@ fittedparametersfig = with_theme(theme_latexfonts()) do
     rangebars!(
         ax4, 
         logomegavalues, 
-        log.([ quantile(v.ψ, 0.05) for v ∈ pv ]), 
-        log.([ quantile(v.ψ, 0.95) for v ∈ pv ]);
+        log.([ quantile(v.ψ, 0.025) for v ∈ pv ]), 
+        log.([ quantile(v.ψ, 0.975) for v ∈ pv ]);
         color=:blue,
     )
     for y ∈ [ 0.001, 0.1, 10, 1000 ]
@@ -410,8 +389,8 @@ fittedparametersfig = with_theme(theme_latexfonts()) do
     rangebars!(
         ax5, 
         logomegavalues, 
-        100 .* (1 .- [ quantile(v.βreduction1, 0.05) for v ∈ pv ]), 
-        100 .* (1 .- [ quantile(v.βreduction1, 0.95) for v ∈ pv ]);
+        100 .* (1 .- [ quantile(v.βreduction1, 0.025) for v ∈ pv ]), 
+        100 .* (1 .- [ quantile(v.βreduction1, 0.975) for v ∈ pv ]);
         color=:blue,
     )
     for y ∈ 20:10:50
@@ -428,8 +407,8 @@ fittedparametersfig = with_theme(theme_latexfonts()) do
     rangebars!(
         ax6, 
         logomegavalues, 
-        [ quantile(v.detection, 0.05) for v ∈ pv ] .* 100, 
-        [ quantile(v.detection, 0.95) for v ∈ pv ] .* 100;
+        [ quantile(v.detection, 0.025) for v ∈ pv ] .* 100, 
+        [ quantile(v.detection, 0.975) for v ∈ pv ] .* 100;
         color=:blue,
     )
     for y ∈ 0.0:0.5:2.0
@@ -570,8 +549,8 @@ priordistributionfig = with_theme(theme_latexfonts()) do
     rangebars!(
         ax2, 
         logomegavalues, 
-        log.([ quantile(v.β0, 0.05) for v ∈ pv ] ./ (γ + μ)), 
-        log.([ quantile(v.β0, 0.95) for v ∈ pv ] ./ (γ + μ));
+        log.([ quantile(v.β0, 0.025) for v ∈ pv ] ./ (γ + μ)), 
+        log.([ quantile(v.β0, 0.975) for v ∈ pv ] ./ (γ + μ));
         color=:blue,
     )
     for y ∈ [ 0.1, 1, 10 ]
@@ -596,8 +575,8 @@ priordistributionfig = with_theme(theme_latexfonts()) do
     rangebars!(
         ax3, 
         logomegavalues, 
-        100 .* [ quantile(v.β1, 0.05) for v ∈ pv ], 
-        100 .* [ quantile(v.β1, 0.95) for v ∈ pv ];
+        100 .* [ quantile(v.β1, 0.025) for v ∈ pv ], 
+        100 .* [ quantile(v.β1, 0.975) for v ∈ pv ];
         color=:blue,
     )
     ax4 = Axis(
@@ -615,8 +594,8 @@ priordistributionfig = with_theme(theme_latexfonts()) do
     rangebars!(
         ax4, 
         logomegavalues, 
-        log.([ quantile(v.ψ, 0.05) for v ∈ pv ]), 
-        log.([ quantile(v.ψ, 0.95) for v ∈ pv ]);
+        log.([ quantile(v.ψ, 0.025) for v ∈ pv ]), 
+        log.([ quantile(v.ψ, 0.975) for v ∈ pv ]);
         color=:blue,
     )
     for y ∈ [ 0.1, 1, 10 ]
@@ -633,8 +612,8 @@ priordistributionfig = with_theme(theme_latexfonts()) do
     rangebars!(
         ax5, 
         logomegavalues, 
-        100 .* (1 .- [ quantile(v.βreduction1, 0.05) for v ∈ pv ]), 
-        100 .* (1 .- [ quantile(v.βreduction1, 0.95) for v ∈ pv ]);
+        100 .* (1 .- [ quantile(v.βreduction1, 0.025) for v ∈ pv ]), 
+        100 .* (1 .- [ quantile(v.βreduction1, 0.975) for v ∈ pv ]);
         color=:blue,
     )
     for y ∈ 0:25:50
@@ -651,8 +630,8 @@ priordistributionfig = with_theme(theme_latexfonts()) do
     rangebars!(
         ax6, 
         logomegavalues, 
-        [ quantile(v.detection, 0.05) for v ∈ pv ] .* 100, 
-        [ quantile(v.detection, 0.95) for v ∈ pv ] .* 100;
+        [ quantile(v.detection, 0.025) for v ∈ pv ] .* 100, 
+        [ quantile(v.detection, 0.975) for v ∈ pv ] .* 100;
         color=:blue,
     )
     for y ∈ 0:1:3

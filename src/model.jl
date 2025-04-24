@@ -3,30 +3,13 @@
 # The ODE model 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# New way of coding sirns! saves approximately 90% of the runtime. Tests added to 
-# check that x1 == cos(2π t - ϕ)
 
-""" 
-    sirns!(du, u, p, t)
-
-The ordinary differential equations model.
-
-`p` is expected to be of type `SirnsParameters` or `LambdaParms` to run the model 
-    with a constant force of infection. Other types will be accepted provided that 
-    all required parameters are named.
-
-The function `sirns_u0` can be used to produce an appropriate vector for `u`. Note 
-    that this vector must include all model compartments, the transmission parameter, 
-    and a value of cumulative infections.
-"""
 function sirns!(du, u, p, t)
     # Hard-coded to run with 3 resistant subcompartments 
     S, I, R1, R2, R3, x1, x2, = u 
-    #@assert minimum(u[1:5]) >= 0
 
     # transmission parameter
-    β = p.β0 * (1 + p.β1 * x1) # more efficient version than cos(2π(t-ϕ))
-    #@assert β >= 0 "β<0 when p=$p, x1=$x1"
+    β = p.β0 * (1 + p.β1 * x1) 
     λ = β * I
     
     du[1] = 3 * p.ω * R3 - λ * S + p.μ * (1 - S)                    # S
@@ -53,88 +36,40 @@ function _sirns!(du, u, p, t, λ)
 end
 
 sirns!(du, u, p::LambdaParms, t) = constantlambda_sirns!(du, u, p, t)
-
-"""
-    constantlambda_sirns!(du, u, p, t)
-
-`p` is expected to be of type `LambdaParms` but other types will be accepted provided 
-    that all required parameters are named.
-
-The function `sirns_u0` can be used to produce an appropriate vector for `u`. Note 
-    that this vector must include all model compartments, the transmission parameter, 
-    and a value of cumulative infections.
-
-See also `sirns!`.
-"""
-function constantlambda_sirns!(du, u, p, t)
-    # Hard-coded to run with 3 resistant subcompartments 
-    S, I, R1, R2, R3, x1, x2, cc = u 
-
-    _sirns!(du, u, p, t, p.λ)
-end 
+constantlambda_sirns!(du, u, p, t) = _sirns!(du, u, p, t, p.λ)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Run models 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-""" 
-    run_sirns(u0::Vector{<:Real}, p::AbstractParameters, duration::Real; t0 = 0, <keyword arguments>)
-    run_sirns(u0::Vector{<:Real}, p::AbstractParameters, tspan::Tuple{Float64, Float64}; <keyword arguments>)
-
-Run the `sirns!` model.
-
-The function `sirns_u0` can be used to produce an appropriate vector for `u0`. Note 
-    that this vector must include all model compartments, the transmission parameter, 
-    and a value of cumulative infections.
-
-## Keyword arguments
-
-All keyword arguments are passed to `DifferentialEquations.solve`. The following 
-    defaults are provided to reduce the likelihood that differences between simulations 
-    are due to differences in running the ODE solver.
-
-* `abstol = 1e-12` 
-* `alg = Vern9(lazy = false)` (note this is a positional argument for `DifferentialEquations.solve`)
-* `maxiters = 1e5`
-* `reltol = 1e-12` 
-* `saveat = .0005`
-""" 
-function run_sirns(u0::Vector{<:Real}, p::AbstractParameters, duration::Real; t0 = 0, kwargs...)
+function run_sirns(
+    u0::Vector{<:Real}, p::AbstractParameters, duration::Real; 
+    t0=0, kwargs...
+)
     tspan = ( Float64(t0), Float64(duration) )
     return run_sirns(u0, p, tspan; kwargs...)
 end 
 
-function run_sirns(u0::Vector{<:Real}, p::AbstractParameters, tspan::Tuple{<:Real, <:Real}; kwargs...)
+function run_sirns(
+    u0::Vector{<:Real}, p::AbstractParameters, tspan::Tuple{<:Real, <:Real}; 
+    kwargs...
+)
     ts = ( Float64(tspan[1]), Float64(tspan[2]) )
     return run_sirns(u0, p, ts; kwargs...)
 end 
 
-function run_sirns(u0::Vector{<:Real}, p::AbstractParameters, tspan::Tuple{Float64, Float64}; 
-        abstol = 1e-12, alg = Vern9(lazy = false), maxiters = 1e5, reltol = 1e-12, 
-        saveat = .0005, kwargs...
-    )
+function run_sirns(
+    u0::Vector{<:Real}, p::AbstractParameters, tspan::Tuple{Float64, Float64}; 
+    abstol=1e-12, alg=Vern9(lazy=false), maxiters=1e5, reltol=1e-12, saveat=0.0005, 
+    kwargs...
+)
     prob = ODEProblem(sirns!, u0, tspan, p)
     sol = solve(prob, alg; abstol, maxiters, reltol, saveat, kwargs...)
     return sol
 end 
 
-"""
-    sirns_u0(S0, I0[, Rs0...]; p, <keyword arguments>)
-
-Construct the vector `u0` to run the model `sirns!`.
-
-Inputs can be values for all compartments or just for `S0` and `I0`. If only `S0` 
-    and `I0` are supplied, the additional keyword argument `equalrs = false` determines 
-    whether the resistant subcompartments will take equal numbers (the default is 
-    to put all resistant individuals into the first subcompartment).
-
-## Keyword arguments
-
-* `t0 = 0` to set the start time for the model so that initial values of `β` are calculated 
-    correctly.
-"""
-function sirns_u0(S0::S, I0::S; p, equalrs = false, kwargs...) where S
+function sirns_u0(S0::S, I0::S; p, equalrs=false, kwargs...) where S
     Rtotal = 1 - (S0 + I0)
     if equalrs 
         rs = Rtotal / 3
@@ -151,39 +86,22 @@ function sirns_u0(S0::S, I0, R1, R2, R3; p, t0 = 0) where S
     for (i, v) ∈ enumerate([ S0, I0, R1, R2, R3 ]) u0[i] = v end  
     u0[6] = cos(2π * t0 - p.ϕ)  # x1 
     u0[7] = sin(2π * t0 - p.ϕ)  # x2
-    u0[8] = zero(S)               # cumulative cases
+    u0[8] = zero(S)  # cumulative cases
     return u0
 end 
 
-""" 
-    modelcompartments(sol, p)
-    modelcompartments(sol, c)
-    modelcompartments(sol, c, inds)
-
-Return vectors of compartment sizes from the ODE solver outputs. 
-
-## Accepted inputs
-* `sol` is the output solution from the ODE solver
-* `p` is an `AbstractParameters` struct or a `NamedTuple` of model parameters. If 
-    `p` is supplied, the output is a `Dict` of all model compartments, the total 
-    proportions immune, and vectors of the transmission parameter and force of infection.
-* `c` is either a symbol, an integer, or a vector of symbols or integers, indicating 
-    which compartment's values to return. 
-* `inds` is a vector of saved times to be included in the vector. The default is 
-    all `t ≥ 0`.
-"""
 function modelcompartments(sol, p::T) where T <: Union{<:AbstractParameters, <:NamedTuple}
-    inds    = compartmentinds(sol)
-    gt      = sol.t[inds]
-    S       = modelcompartments(sol, 1, inds)
-    I       = modelcompartments(sol, 2, inds)
-    R1      = modelcompartments(sol, 3, inds)
-    R2      = modelcompartments(sol, 4, inds)
-    R3      = modelcompartments(sol, 5, inds)
-    Rtotal  = @. R1 + R2 + R3
-    β       = p.β0 .* (1 .+ p.β1 .* modelcompartments(sol, 6, inds))
-    cc      = modelcompartments(sol, 8, inds)
-    λ       = β .* I
+    inds = compartmentinds(sol)
+    gt = sol.t[inds]
+    S = modelcompartments(sol, 1, inds)
+    I = modelcompartments(sol, 2, inds)
+    R1 = modelcompartments(sol, 3, inds)
+    R2 = modelcompartments(sol, 4, inds)
+    R3 = modelcompartments(sol, 5, inds)
+    Rtotal = @. R1 + R2 + R3
+    β = p.β0 .* (1 .+ p.β1 .* modelcompartments(sol, 6, inds))
+    cc = modelcompartments(sol, 8, inds)
+    λ = β .* I
     return @dict gt S I R1 R2 R3 Rtotal cc β λ
 end 
 
@@ -206,19 +124,7 @@ function compartmentinds(sol)
     return inds 
 end 
 
-"""
-    casespertimeblock(cc)
-
-Calculates incidence from a vector of cumulative infection data.
-
-The returned vector will be 1 shorter than the supplied vector as no incidence is 
-    calculated for the initial time point. 
-
-Input can be a vector of values, or a Dict containing an element labelled `:cc` or 
-    `\"cc\"`.
-"""
 casespertimeblock(d::Dict{Symbol, <:Any}) = casespertimeblock(d[:cc])
-
 casespertimeblock(d::Dict{<:AbstractString, <:Any}) = casespertimeblock(d["cc"])
 
 function casespertimeblock(cc::Vector{T}) where T
@@ -256,19 +162,6 @@ function modelincidence(
     return @ntuple gt incidence 
 end
 
-"""
-    pl_modelincidence(config::Dict{Symbol, <:Any})
-
-Function to calculate model incidence using `DrWatson.produce_or_load`.
-
-`config` is a `Dict{Symbol, <:Any}` containing `β0`, `β1`, `ϕ`, `γ`, `μ`, `ψ`, `ω`, 
-    which are passed to `SirnsParameters`, and `kw`, which is a `NamedTuple` of 
-    keyword arguments. The default keyword arguments are, 
-* `equalrs = true`, passed to `sirns_u0`
-* `I0 = .001`, passed to `sirns_u0`
-* `S0 = .5`, passed to `sirns_u0`
-* `tspan = ( -1000., 10. )`, for the duration of the simulation 
-"""
 function pl_modelincidence(config::Dict{Symbol, <:Any})
     @unpack β0, β1, ϕ, γ, μ, ψ, ω, kw = config
     result = modelincidence(SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω); kw...)

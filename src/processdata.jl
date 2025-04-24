@@ -3,17 +3,6 @@
 # Process csv data 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-"""
-    processagedata(rawfilename[, processedfilename])
-
-Process data from CSV file on age-stratified respiratory syncytial virus data.
-
-If `processedfilename` is supplied and is a file in the `exp_pro` folder, this will 
-    be loaded. Otherwise, will use `rawfilename` from the `exp_raw` folder. The 
-    processed version will then be saved as `processedfilename`.
-
-Variables should be strings of filenames, including `.csv` at the end.
-"""
 function processagedata(filename)
     data = CSV.read(filename, DataFrame)
 
@@ -54,17 +43,6 @@ function processagedata(rawfilename, processedfilename)
     return processdata(processagedata, rawfilename, processedfilename)
 end
 
-"""
-    processrsvdata(rawfilename[, processedfilename])
-
-Process data from CSV file on respiratory syncytial virus data.
-
-If `processedfilename` is supplied and is a file in the `exp_pro` folder, this will 
-    be loaded. Otherwise, will use `rawfilename` from the `exp_raw` folder. The 
-    processed version will then be saved as `processedfilename`.
-
-Variables should be strings of filenames, including `.csv` at the end.
-"""
 function processrsvdata(filename)
     data = CSV.read(filename, DataFrame)
 
@@ -87,17 +65,6 @@ function processrsvdata(rawfilename, processedfilename)
     return processdata(processrsvdata, rawfilename, processedfilename)
 end
 
-"""
-    processrsvdata(rawfilename[, processedfilename])
-
-Process data from the Oxford Covid-19 Government Response Tracker's stringency index.
-
-If `processedfilename` is supplied and is a file in the `exp_pro` folder, this will 
-    be loaded. Otherwise, will use `rawfilename` from the `exp_raw` folder. The 
-    processed version will then be saved as `processedfilename`.
-
-Variables should be strings of filenames, including `.csv` at the end.
-"""
 function processcrgtvdata(filename)
     data = CSV.read(filename, DataFrame)
 
