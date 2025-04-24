@@ -3,9 +3,9 @@ include("rsvfitmodel.jl")
 
 Random.seed!(1729)
 
-if isfile(datadir("sims", "priorsdict.jld2"))
+if isfile(datadir("sims", "priorsdict.jdl2"))
     @info "Loading prior values"
-    priorsdict = load(datadir("sims", "priorsdict.jld2"))
+    priorsdict = load(datadir("sims", "priorsdict.jdl2"))
 else
     priorsdict = let 
         prob = fittedsimulationsetup(saveat)

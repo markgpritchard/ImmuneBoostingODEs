@@ -1,10 +1,10 @@
 
 @model function fitmodel(
     incidence, prob, cbs, saveat;
-    betazeroprior=Exponential(150),  # truncated at R0 = 100
+    betazeroprior=truncated(Exponential(150), 0, 4870),  # truncated at R0 = 100
     betaoneprior=Uniform(0, 0.9),
     phiprior=Uniform(-π, π),
-    psiprior=Exponential(1),
+    psiprior=truncated(Exponential(1), 0, 1000),
     betareduction1prior=Beta(4, 1),
     betareduction2prior=Beta(9, 1),
     omega=2.0,
@@ -30,10 +30,12 @@
         abstol=1e-15, maxiters=1e8, verbose=false,
     )
     if sol.retcode != :Success
+        #@info "Adding logprob -Inf when p=$p, detection=$detection"
         Turing.@addlogprob! -Inf
         return nothing
     end
 
+    #cumulativecases = modelcompartments(sol, :cc)
     cumulativecases = modelcompartments(sol, 1)
     incidentcases = casespertimeblock(cumulativecases) .* 5_450_000 .* detection
 

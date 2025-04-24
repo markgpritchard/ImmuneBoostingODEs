@@ -19,58 +19,26 @@ include("plotting.jl")
 
 export 
     ## structs.jl 
-    SirnsParameters, 
-    LambdaParms,
+    SirnsParameters, LambdaParms,
     ## consts.jl"
-    COLOURVECTOR, 
-    COLOUR_I, 
-    COLOUR_R, 
-    COLOUR_S, 
-    MONTHDAYS,
+    COLOURVECTOR, COLOUR_I, COLOUR_R, COLOUR_S, MONTHDAYS,
     ## processdata.jl
-    printrawdate, 
-    processagedata, 
-    processcrgtvdata, 
-    processrsvdata,
+    printrawdate, processagedata, processcrgtvdata, processrsvdata,
     ## equilibria.jl
-    bifurcationlimits, 
-    equil, 
-    equileigen, 
-    equili, 
-    equilplotdata, 
-    equilr, 
-    equilri, 
-    equils, 
-    findpsi, 
-    pl_bifurcationlimits, 
-    realmaxequileigen,
+    bifurcationlimits, equil, equileigen, equili, equilplotdata, equilr, equilri, equils, 
+    findpsi, pl_bifurcationlimits, realmaxequileigen,
     ## model.jl
-    casespertimeblock, 
-    modelcompartments, 
-    pl_modelincidence, 
-    reducetransmission!, 
-    restoretransmission!, 
-    run_sirns, 
-    sirns!, 
-    sirns_u0, 
+    casespertimeblock, modelcompartments, pl_modelincidence, reducetransmission!, 
+    restoretransmission!, run_sirns, sirns!, sirns_u0, 
     ## analysedata.jl
-    fittedsimulationquantiles, 
-    fittedsimulationsetup, 
-    fourierhmdata, 
-    loadrsvdata, 
-    memosolver, 
-    runfittedsimulations, 
+    fittedsimulationquantiles, fittedsimulationsetup, fourierhmdata, loadrsvdata, 
+    memosolver, runfittedsimulations, 
     ## equilibriumsurface.jl
-    labelequilibriumsurface!, 
-    plotequilibriumsurface!,
+    labelequilibriumsurface!, plotequilibriumsurface!,
     ## plotting.jl
-    plotchains, 
-    plotequilibriumc!, 
-    plotfittedsimulationquantiles!, 
-    plotfourier!, 
-    plotnpi!, 
-    plotrsvage!, 
-    plotsi!, 
-    plotstringency!
+    modelflowchart!, plotchains, plotequilibrium!, plotequilibriuma!, plotequilibriumb!, 
+    plotequilibriumc!, plotequilibriumproportions!, plotequilibriumproportionscontour!,
+    plotfittedsimulationquantiles!, plotfittedsimulations!, plotfourier!, 
+    plotimmuneduration!, plotnpi!, plotrsvage!, plotrsvsim!, plotsi!, plotstringency!
  
 end  # module ImmuneBoostingODEs 
