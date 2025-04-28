@@ -363,7 +363,7 @@ for (ax, freqs, densities) ∈ zip(axs, freqvector, densityvector)
     formataxis!(ax; hidey = i != 1)
     i += 1
 end
-Label(gl[3, 1:3], L"Boosting coefficient, $\omega$"; 
+Label(gl[3, 1:3], L"Boosting coefficient, $\psi$"; 
     fontsize = 11.84, tellwidth = false)
 end
 
