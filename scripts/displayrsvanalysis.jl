@@ -21,104 +21,51 @@ end
 # Load results 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-rsvparameters01 = loadrsvdata(0.1) 
-plotchains(rsvparameters01)
-filter!(:chain => x -> x ∈ [ 2, 4, 5 ], rsvparameters01)
-plotchains(rsvparameters01)
+chain_omega_01 = load(datadir("sims", "chain_omega_0.1_nrounds_25.jld2"))
+chain_omega_01df = DataFrame(chain_omega_01["chain"])
+plotchains(chain_omega_01df)
 plotvals01 = fittedsimulationquantiles(
-    rsvparameters01, 0.1, saveat, cbs, [ 0.025, 0.5, 0.975 ]
+    chain_omega_01df, 0.1, saveat, cbs, [ 0.025, 0.5, 0.975 ]
 )
-R0_01 = let 
-    beta0s = quantile(rsvparameters01.β0, [ 0.025, 0.5, 0.975 ])
-    beta0s ./ (48.7 + 0.0087)
-end
-#3-element Vector{Float64}:
-# 27.9398281195748
-# 29.58401062939877
-# 30.730225320740598
 
-rsvparameters02 = loadrsvdata(0.2)
-plotchains(rsvparameters02)
-filter!(:chain => x -> x == 1, rsvparameters02)
-plotchains(rsvparameters02)
+chain_omega_02 = load(datadir("sims", "chain_omega_0.2_nrounds_25.jld2"))
+chain_omega_02df = DataFrame(chain_omega_02["chain"])
+plotchains(chain_omega_02df)
 plotvals02 = fittedsimulationquantiles(
-    rsvparameters02, 0.2, saveat, cbs, [ 0.025, 0.5, 0.975 ]
+    chain_omega_02df, 0.2, saveat, cbs, [ 0.025, 0.5, 0.975 ]
 )
 
-rsvparameters04 = loadrsvdata(0.4)
-plotchains(rsvparameters04)
-filter!(:chain => x -> x == 1, rsvparameters04)
-plotchains(rsvparameters04)
+chain_omega_04 = load(datadir("sims", "chain_omega_0.4_nrounds_25.jld2"))
+chain_omega_04df = DataFrame(chain_omega_04["chain"])
+plotchains(chain_omega_04df)
 plotvals04 = fittedsimulationquantiles(
-    rsvparameters04, 0.4, saveat, cbs, [ 0.025, 0.5, 0.975 ]
+    chain_omega_04df, 0.4, saveat, cbs, [ 0.025, 0.5, 0.975 ]
 )
-βreduction1_04 = 1 .- quantile(rsvparameters04.βreduction1, [ 0.025, 0.5, 0.975 ])
-#3-element Vector{Float64}:
-# 0.42537389746949894
-# 0.4274937278262533
-# 0.4304722062246449
 
-rsvparameters1 = loadrsvdata(1.0)
-plotchains(rsvparameters1)
-filter!(:chain => x -> x != 1, rsvparameters1)
-plotchains(rsvparameters1)
+chain_omega_1 = load(datadir("sims", "chain_omega_1.0_nrounds_25.jld2"))
+chain_omega_1df = DataFrame(chain_omega_1["chain"])
+plotchains(chain_omega_1df)
 plotvals1 = fittedsimulationquantiles(
-    rsvparameters1, 1.0, saveat, cbs, [ 0.025, 0.5, 0.975 ]
+    chain_omega_1df, 1.0, saveat, cbs, [ 0.025, 0.5, 0.975 ]
 )
-beta1_1 = quantile(rsvparameters1.β1, [ 0.025, 0.5, 0.975 ])
-#3-element Vector{Float64}:
-# 0.1754460107922378
-# 0.17788693495654073
-# 0.1818164970772631
-psi_1 = quantile(rsvparameters1.ψ, [ 0.025, 0.5, 0.975 ])
-#3-element Vector{Float64}:
-# 0.00010909782961219074
-# 0.0013969680682125209
-# 0.005838432275809601
 
-rsvparameters2 = loadrsvdata(2.0)
-plotchains(rsvparameters2)
-filter!(:chain => x -> x ∈ [ 2, 3, 5 ], rsvparameters2)
-plotchains(rsvparameters2)
+chain_omega_2 = load(datadir("sims", "chain_omega_2.0_nrounds_25.jld2"))
+chain_omega_2df = DataFrame(chain_omega_2["chain"])
+plotchains(chain_omega_2df)
 plotvals2 = fittedsimulationquantiles(
-    rsvparameters2, 2.0, saveat, cbs, [ 0.025, 0.5, 0.975 ]
+    chain_omegadf, 2.0, saveat, cbs, [ 0.025, 0.5, 0.975 ]
 )
-βreduction1_2 = 1 .- quantile(rsvparameters2.βreduction1, [ 0.025, 0.5, 0.975 ])
-#3-element Vector{Float64}:
-# 0.27889082920822683
-# 0.2816906091386049
-# 0.28507902779791494
 
-rsvparameters4 = loadrsvdata(4.0)
-plotchains(rsvparameters4)
-filter!(:chain => x -> x ∈ [ 2, 3, 5 ], rsvparameters4)
-plotchains(rsvparameters4)
+chain_omega_4 = load(datadir("sims", "chain_omega_4.0_nrounds_25.jld2"))
+chain_omega_4df = DataFrame(chain_omega_4["chain"])
+plotchains(chain_omega_4df)
 plotvals4 = fittedsimulationquantiles(
-    rsvparameters4, 4.0, saveat, cbs, [ 0.025, 0.5, 0.975 ]
+    chain_omega_4df, 4.0, saveat, cbs, [ 0.025, 0.5, 0.975 ]
 )
 
-rsvparameters6 = loadrsvdata(6.0)
-plotchains(rsvparameters6)
-filter!(:chain => x -> x != 1, rsvparameters6)
-plotchains(rsvparameters6)
+chain_omega_6 = load(datadir("sims", "chain_omega_6.0_nrounds_25.jld2"))
+chain_omega_6df = DataFrame(chain_omega_6["chain"])
+plotchains(chain_omega_6df)
 plotvals6 = fittedsimulationquantiles(
-    rsvparameters6, 6.0, saveat, cbs, [ 0.025, 0.5, 0.975 ]
+    chain_omega_6df, 6.0, saveat, cbs, [ 0.025, 0.5, 0.975 ]
 )
-R0_6 = let 
-    beta0s = quantile(rsvparameters6.β0, [ 0.025, 0.5, 0.975 ])
-    beta0s ./ (48.7 + 0.0087)
-end
-#3-element Vector{Float64}:
-# 1.5808061809771425
-# 1.592694730925088
-# 1.6042283249278522
-beta1_6 = quantile(rsvparameters6.β1, [ 0.025, 0.5, 0.975 ])
-#3-element Vector{Float64}:
-# 0.06894139362433213
-# 0.07223981399834295
-# 0.07529313242053985
-psi_6 = quantile(rsvparameters6.ψ, [ 0.025, 0.5, 0.975 ])
-#3-element Vector{Float64}:
-# 288.26257743152075
-# 301.2348000922061
-# 314.895983917204

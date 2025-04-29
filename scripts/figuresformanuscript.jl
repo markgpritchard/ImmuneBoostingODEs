@@ -627,7 +627,7 @@ priordistributionfig = with_theme(theme_latexfonts()) do
             color=RGBAf(0, 0, 0, 0.12), linestyle=( :dot, :dense ), linewidth=1,
         )
     end   
-    ax6 = Axis(gb[5, 1]; xticks=( logomegavalues, omegalabels ), yticks=0:1:3)
+    ax6 = Axis(gb[5, 1]; xticks=( logomegavalues, omegalabels ) )#, yticks=0:1:3)
     scatter!(
         ax6, logomegavalues, [ quantile(v.detection, 0.5) for v ∈ pv ] .* 100; 
         color=:blue, markersize=5,

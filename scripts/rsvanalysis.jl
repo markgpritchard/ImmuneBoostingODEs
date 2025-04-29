@@ -2,14 +2,16 @@
 using DrWatson
 
 @quickactivate :ImmuneBoostingODEs
-using DataFrames, DifferentialEquations, DynamicPPL, Optim, Random, Turing
+using DataFrames, DifferentialEquations, Optim, Random, Turing
 
 testrun = true 
 
-if length(ARGS) == 3 
+if length(ARGS) == 2 
     omega = parse(Float64, ARGS[1])
+    n_rounds = parse(Int, ARGS[2])
 else
-    omega = 1.0#2.0
+    omega = 2.0
+    n_rounds = testrun ? 25 : 10_000
 end
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,39 +64,32 @@ function optimmodel(paramvector, β1, ω, data; callback, saveat)
     end
     cumulativecases = modelcompartments(sol, 1)
     incidentcases = casespertimeblock(cumulativecases) .* 5_450_000 .* detection
-    return sum(
-        [ 
-            #data[i] < 1 ? 
-                abs2(data[i] - incidentcases[i]) #:
-            #    abs2(data[i] - incidentcases[i]) / data[i]
-            for i ∈ eachindex(data) 
-        ]
-    )
+    return sum([ abs2(data[i] - incidentcases[i]) for i ∈ eachindex(data) ])
 end
 
 result0001 = optimize(
     x -> optimmodel(x, 0.001, omega, data.Cases; callback=cbs, saveat), 
     [ 2.0, 0.1, -4 ], 
     NelderMead(), 
-    Optim.Options(; iterations=5000)
+    Optim.Options(; iterations=50_000)
 )
 result001 = optimize(
     x -> optimmodel(x, 0.01, omega, data.Cases; callback=cbs, saveat), 
     [ 2.0, 0.1, -4 ], 
     NelderMead(), 
-    Optim.Options(; iterations=5000)
+    Optim.Options(; iterations=50_000)
 )
 result01 = optimize(
     x -> optimmodel(x, 0.1, omega, data.Cases; callback=cbs, saveat), 
     [ 2.0, 0.1, -4 ], 
     NelderMead(), 
-    Optim.Options(; iterations=5000)
+    Optim.Options(; iterations=50_000)
 )
 result025 = optimize(
     x -> optimmodel(x, 0.25, omega, data.Cases; callback=cbs, saveat), 
     [ 2.0, 0.1, -4 ], 
     NelderMead(), 
-    Optim.Options(; iterations=5000)
+    Optim.Options(; iterations=50_000)
 )
 
 initvalues0001 = Optim.minimizer(result0001)
@@ -108,7 +103,7 @@ chain = sample(
     fitmodel(data.Cases, prob, cbs, saveat; omega),
     NUTS(0.65),
     MCMCThreads(),
-    testrun ? 25 : 10_000,
+    n_rounds,
     4;
     initial_params=[
         [
@@ -150,4 +145,12 @@ chain = sample(
     ],
 )
 
-chaindf = DataFrame(chain)
+chaindict = Dict(
+    "chain" => chain,
+    "result0001" => result0001,
+    "result001" => result001,
+    "result01" => result01,
+    "result025" => result025,
+)
+
+safesave(datadir("sims", "chain_omega_$(omega)_nrounds_$(n_rounds).jld2"), chaindict)
