@@ -32,26 +32,31 @@ include("rsvfitmodel.jl")
 
 transformtheta(x) = exp(x) / (1 + exp(x))
 
-function optimmodel(paramvector, β1, ω, data; callback, saveat)
+function optimmodel(paramvector, ω, data; callback, saveat)
     # take any real values in paramvector and transform into "acceptable" values 
-    R0, ψ, _detection = paramvector
-    detection = transformtheta(_detection)
-    if R0 < 0 || ψ < 0 || detection < 0 || detection > 1
+    R0, _β1, _ϕ, ψt, _reduce1, _reduce2, _detection = paramvector
+    if R0 < 0
         return Inf
     end
+    β1 = transformtheta(_β1)
+    ϕ = 2π * transformtheta(_ϕ) - π
+    reduce1 = transformtheta(_reduce1)
+    reduce2 = transformtheta(_reduce2)
+    detection = transformtheta(_detection)
+    ψ = exp(0.7 * ψt)
 
     β0 = R0 * 48.7087
     p = SirnsParameters(
         β0, 
         β1, 
-        0.0,  # ϕ 
+        ϕ, 
         48.7,  # γ 
         0.0087,  # μ 
         ψ, 
         ω, 
         β0, 
-        0.8 * β0, 
-        0.9 * β0
+        reduce1 * β0, 
+        reduce2 * β0
     )
     u0 = sirns_u0(0.01, 2e-5; p, equalrs=true, t0=1996.737)  # 10 years before data collection
     sol = memosolver(
@@ -67,35 +72,35 @@ function optimmodel(paramvector, β1, ω, data; callback, saveat)
     return sum([ abs2(data[i] - incidentcases[i]) for i ∈ eachindex(data) ])
 end
 
-result0001 = optimize(
-    x -> optimmodel(x, 0.001, omega, data.Cases; callback=cbs, saveat), 
-    [ 2.0, 0.1, -4 ], 
+result1 = optimize(
+    x -> optimmodel(x, omega, data.Cases; callback=cbs, saveat), 
+    [ 1.0, -2.0, 0.0, 4.0, 1.0, 2.0, -4.5 ], 
     NelderMead(), 
-    Optim.Options(; iterations=50_000)
+    Optim.Options(; iterations=5000)
 )
-result001 = optimize(
-    x -> optimmodel(x, 0.01, omega, data.Cases; callback=cbs, saveat), 
-    [ 2.0, 0.1, -4 ], 
+result2 = optimize(
+    x -> optimmodel(x, omega, data.Cases; callback=cbs, saveat), 
+    [ 2.0, -2.0, 0.0, -4.0, 1.0, 2.0, -4.5 ], 
     NelderMead(), 
-    Optim.Options(; iterations=50_000)
+    Optim.Options(; iterations=5000)
 )
-result01 = optimize(
-    x -> optimmodel(x, 0.1, omega, data.Cases; callback=cbs, saveat), 
-    [ 2.0, 0.1, -4 ], 
+result3 = optimize(
+    x -> optimmodel(x, omega, data.Cases; callback=cbs, saveat), 
+    [ 3.0, -2.0, 0.0, 4.0, 1.0, 2.0, -4.5 ], 
     NelderMead(), 
-    Optim.Options(; iterations=50_000)
+    Optim.Options(; iterations=5000)
 )
-result025 = optimize(
-    x -> optimmodel(x, 0.25, omega, data.Cases; callback=cbs, saveat), 
-    [ 2.0, 0.1, -4 ], 
+result4 = optimize(
+    x -> optimmodel(x, omega, data.Cases; callback=cbs, saveat), 
+    [ 10.0, -2.0, 0.0, -4.0, 1.0, 2.0, -4.5 ], 
     NelderMead(), 
-    Optim.Options(; iterations=50_000)
+    Optim.Options(; iterations=5000)
 )
 
-initvalues0001 = Optim.minimizer(result0001)
-initvalues001 = Optim.minimizer(result001)
-initvalues01 = Optim.minimizer(result01)
-initvalues025 = Optim.minimizer(result025)
+initvalues1 = Optim.minimizer(result1)
+initvalues2 = Optim.minimizer(result2)
+initvalues3 = Optim.minimizer(result3)
+initvalues4 = Optim.minimizer(result4)
 
 Random.seed!(round(Int, omega * 100))
 
@@ -107,40 +112,40 @@ chain = sample(
     4;
     initial_params=[
         [
-            initvalues0001[1],  # R0
-            0.001,  # β1
-            0.0,  # ϕ
-            initvalues0001[2],  # ψ
-            0.8,  # βreduction1
-            0.9,  # βreduction2
-            transformtheta(initvalues0001[3])
+            initvalues1[1],  # R0
+            transformtheta(initvalues1[2]),  # β1
+            2π * transformtheta(initvalues1[3]) - π,  # ϕ
+            initvalues1[4],  # ψt
+            transformtheta(initvalues1[5]),  # βreduction1
+            transformtheta(initvalues1[6]),  # βreduction2
+            transformtheta(initvalues1[7])  # detection
         ],
         [
-            initvalues001[1],  # R0
-            0.01,  # β1
-            0.0,  # ϕ
-            initvalues001[2],  # ψ
-            0.8,  # βreduction1
-            0.9,  # βreduction2
-            transformtheta(initvalues001[3])
+            initvalues2[1],  # R0
+            transformtheta(initvalues2[2]),  # β1
+            2π * transformtheta(initvalues2[3]) - π,  # ϕ
+            initvalues2[4],  # ψt
+            transformtheta(initvalues2[5]),  # βreduction1
+            transformtheta(initvalues2[6]),  # βreduction2
+            transformtheta(initvalues2[7])  # detection
         ],
         [
-            initvalues01[1],  # R0
-            0.1,  # β1
-            0.0,  # ϕ
-            initvalues01[2],  # ψ
-            0.8,  # βreduction1
-            0.9,  # βreduction2
-            transformtheta(initvalues01[3])
+            initvalues3[1],  # R0
+            transformtheta(initvalues3[2]),  # β1
+            2π * transformtheta(initvalues3[3]) - π,  # ϕ
+            initvalues3[4],  # ψt
+            transformtheta(initvalues3[5]),  # βreduction1
+            transformtheta(initvalues3[6]),  # βreduction2
+            transformtheta(initvalues3[7])  # detection
         ],
         [
-            initvalues025[1],  # R0
-            0.25,  # β1
-            0.0,  # ϕ
-            initvalues025[2],  # ψ
-            0.8,  # βreduction1
-            0.9,  # βreduction2
-            transformtheta(initvalues025[3])
+            initvalues4[1],  # R0
+            transformtheta(initvalues4[2]),  # β1
+            2π * transformtheta(initvalues4[3]) - π,  # ϕ
+            initvalues4[4],  # ψt
+            transformtheta(initvalues4[5]),  # βreduction1
+            transformtheta(initvalues4[6]),  # βreduction2
+            transformtheta(initvalues4[7])  # detection
         ]
     ],
 )
