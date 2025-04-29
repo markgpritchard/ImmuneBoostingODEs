@@ -2,7 +2,7 @@
 
 using DrWatson
 @quickactivate :ImmuneBoostingODEs
-using CairoMakie, MakieTeX, PlotFormatting, Turing
+using CairoMakie, MakieTeX, PlotFormatting, Random, Turing
 CairoMakie.activate!()  # allows figures to be saved as vector files
 
 include("immuneduration.jl") 
@@ -157,7 +157,7 @@ critpsiplot = with_theme(theme_latexfonts()) do
 
     fig
 end
-safesave(plotsdir("critpsiplot.pdf"), critpsiplot)
+safesave(plotsdir("critpsiplotlog.pdf"), critpsiplot)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -504,10 +504,11 @@ priordistributionfig = with_theme(theme_latexfonts()) do
     inds = findall(x -> x >= 50, crgtdata.StringencyIndex_Average)
     reduceday = crgtdata.Date[inds[1]]
     increaseday = crgtdata.Date[last(inds)]
-    pv = [ DataFrame(v) for v ∈ priorsvector ]
+    pv = [ 
+        DataFrame(priorsdict["priors$([ "01", "02", "04", "1", "2", "4", "6" ][i])"]) 
+        for i ∈ 1:7 
+    ]
 
-    γ = 48.7
-    μ = 0.0087
     logomegavalues = log.([ 0.1, 0.2, 0.4, 1.0, 2.0, 4.0, 6 ])
     omegalabels = [ "0.1", "0.2", "0.4", "1", "2", "4", "6" ]
 
@@ -515,10 +516,14 @@ priordistributionfig = with_theme(theme_latexfonts()) do
 
     ga = GridLayout(fig[1, 1])
     axs = [ Axis(ga[i, 1]; xticks=2017:2:2023, yticks=WilkinsonTicks(3)) for i ∈ 1:7 ]
-    for (i, v) ∈ enumerate(priorsvalues)
+    for (i, v) ∈ enumerate(priorsvaluequantiles)
         _texty = max(700.0, 1.15 * maximum(maximum.(v)))
         textlocation = ( 2016.8, _texty )
         plotfittedsimulationquantiles!(axs[i], data, v, saveat)
+        band!(
+            axs[i], saveat[2:end], [ y[1] for y ∈ priorscasesquantiles[i] ], [ y[3] for y ∈ priorscasesquantiles[i] ]; 
+        color=( COLOUR_I, 0.25 ),
+    )
         text!(
             axs[i], textlocation[1], textlocation[2]; 
             text="ω=$(omegalabels[i])", fontsize=11.84, align=( :left, :top )
@@ -543,14 +548,14 @@ priordistributionfig = with_theme(theme_latexfonts()) do
     scatter!(
         ax2, 
         logomegavalues, 
-        log.([ quantile(v.β0, 0.5) for v ∈ pv ] ./ (γ + μ)); 
+        log.([ quantile(v.mean_R0, 0.5) for v ∈ pv ]); 
         color=:blue, markersize=5,
     )
     rangebars!(
         ax2, 
         logomegavalues, 
-        log.([ quantile(v.β0, 0.025) for v ∈ pv ] ./ (γ + μ)), 
-        log.([ quantile(v.β0, 0.975) for v ∈ pv ] ./ (γ + μ));
+        log.([ quantile(v.mean_R0, 0.025) for v ∈ pv ]), 
+        log.([ quantile(v.mean_R0, 0.975) for v ∈ pv ]);
         color=:blue,
     )
     for y ∈ [ 0.1, 1, 10 ]
@@ -588,14 +593,14 @@ priordistributionfig = with_theme(theme_latexfonts()) do
         )
     )
     scatter!(
-        ax4, logomegavalues, log.([ quantile(v.ψ, 0.5) for v ∈ pv ]); 
+        ax4, logomegavalues, log.([ quantile(exp.(0.7 .* v.ψt), 0.5) for v ∈ pv ]); 
         color=:blue, markersize=5,
     )
     rangebars!(
         ax4, 
         logomegavalues, 
-        log.([ quantile(v.ψ, 0.025) for v ∈ pv ]), 
-        log.([ quantile(v.ψ, 0.975) for v ∈ pv ]);
+        log.([ quantile(exp.(0.7 .* v.ψt), 0.025) for v ∈ pv ]), 
+        log.([ quantile(exp.(0.7 .* v.ψt), 0.975) for v ∈ pv ]);
         color=:blue,
     )
     for y ∈ [ 0.1, 1, 10 ]

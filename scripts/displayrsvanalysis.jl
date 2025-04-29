@@ -2,7 +2,7 @@
 using DrWatson
 @quickactivate :ImmuneBoostingODEs
 
-using CairoMakie, DataFrames, DifferentialEquations, Pigeons, Random, Turing
+using CairoMakie, DataFrames, DifferentialEquations, Random, Turing
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Load the data 

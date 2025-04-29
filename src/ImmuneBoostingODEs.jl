@@ -1,7 +1,7 @@
 
 module ImmuneBoostingODEs 
 
-using CairoMakie, CSV, DataFrames, DifferentialEquations, DrWatson, FFTW, PlotFormatting
+using CairoMakie, CSV, DataFrames, DifferentialEquations, DrWatson, FFTW, ForwardDiff, PlotFormatting
 using StatsBase
 using LinearAlgebra: eigen
 using Memoization: @memoize

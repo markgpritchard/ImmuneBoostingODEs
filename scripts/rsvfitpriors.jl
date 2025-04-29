@@ -1,5 +1,11 @@
 
+using DataFrames, DifferentialEquations, DynamicPPL, Optim, Random, Turing
+
+include("rsvsetup.jl")
 include("rsvfitmodel.jl")
+
+poissoncases(::Missing) = missing 
+poissoncases(x::Number) = rand(Poisson(x))
 
 Random.seed!(1729)
 
@@ -8,39 +14,66 @@ if isfile(datadir("sims", "priorsdict.jld2"))
     priorsdict = load(datadir("sims", "priorsdict.jld2"))
 else
     priorsdict = let 
-        prob = fittedsimulationsetup(saveat)
-        model01 = fitmodel(data.Cases, prob, cbs, saveat; omega=0.1)
-        priors01 = sample(model01, Prior(), MCMCThreads(), 4000, 4)
-        model02 = fitmodel(data.Cases, prob, cbs, saveat; omega=0.2)
-        priors02 = sample(model02, Prior(), MCMCThreads(), 4000, 4)
-        model04 = fitmodel(data.Cases, prob, cbs, saveat; omega=0.4)
-        priors04 = sample(model04, Prior(), MCMCThreads(), 4000, 4)
-        model1 = fitmodel(data.Cases, prob, cbs, saveat; omega=1.0)
-        priors1 = sample(model1, Prior(), MCMCThreads(), 4000, 4)
-        model2 = fitmodel(data.Cases, prob, cbs, saveat; omega=2.0)
-        priors2 = sample(model2, Prior(), MCMCThreads(), 4000, 4)
-        model4 = fitmodel(data.Cases, prob, cbs, saveat; omega=4.0)
-        priors4 = sample(model4, Prior(), MCMCThreads(), 4000, 4)
-        model6 = fitmodel(data.Cases, prob, cbs, saveat; omega=6.0)
-        priors6 = sample(model6, Prior(), MCMCThreads(), 4000, 4)
-
-        @strdict priors01 priors02 priors04 priors1 priors2 priors4 priors6
+        pd = Dict{String, Chains}()
+        names = [ "priors$x" for x ∈ [ "01", "02", "04", "1", "2", "4", "6" ] ]
+        omegas = [ 0.1, 0.2, 0.4, 1.0, 2.0, 4.0, 6.0 ]
+        for i ∈ 1:7 
+            @info "Sampling for ω=$(omegas[i])"
+            prob = fittedsimulationsetup(saveat)
+            m = fitmodel(data.Cases, prob, cbs, saveat; omega=omegas[i])
+            p = sample(m, Prior(), MCMCThreads(), 1000, 4)
+            push!(pd, names[i] => p)
+        end
+        pd
     end
-
     safesave(datadir("sims", "priorsdict.jld2"), priorsdict)
 end
 
-priorsvector = [
-    priorsdict["priors01"],
-    priorsdict["priors02"],
-    priorsdict["priors04"],
-    priorsdict["priors1"],
-    priorsdict["priors2"],
-    priorsdict["priors4"],
-    priorsdict["priors6"],    
-]
+if isfile(datadir("sims", "priormodeloutputs.jld2"))
+    @info "Loading prior model outputs"
+    priormodeloutputs = load(datadir("sims", "priormodeloutputs.jld2"))
+else
+    priormodeloutputs = let 
+        pmo = Dict{String, Matrix{Union{Missing, Float64}}}()
+        names = [ "priors$x" for x ∈ [ "01", "02", "04", "1", "2", "4", "6" ] ]
+        omegas = [ 0.1, 0.2, 0.4, 1.0, 2.0, 4.0, 6.0 ]
+        for i ∈ 1:7 
+            priorsdf = DataFrame(priorsdict[names[i]])
+            push!(pmo, names[i] => runfittedsimulations(priorsdf, omegas[i], saveat, cbs))
+        end
+        pmo
+    end
+    safesave(datadir("sims", "priormodeloutputs.jld2"), priormodeloutputs)
+end
 
-priorsvalues = [
-    fittedsimulationquantiles(DataFrame(p), omega, saveat, cbs, [ 0.025, 0.5, 0.975 ])
-    for (p, omega) ∈ zip(priorsvector, [ 0.1, 0.2, 0.4, 1.0, 2.0, 4.0, 6.0 ])
-]
+if isfile(datadir("sims", "priormodelcases.jld2"))
+    @info "Loading prior model number of cases"
+    priormodelcases = load(datadir("sims", "priormodelcases.jld2"))
+else
+    priormodelcases = let 
+        pmc = Dict{String, Matrix{Union{Missing, Int}}}()
+        names = [ "priors$x" for x ∈ [ "01", "02", "04", "1", "2", "4", "6" ] ]
+        omegas = [ 0.1, 0.2, 0.4, 1.0, 2.0, 4.0, 6.0 ]
+        Threads.@threads for i ∈ 1:7 
+            push!(pmc, names[i] => poissoncases.(priormodeloutputs[names[i]]))
+        end
+        pmc
+    end
+    safesave(datadir("sims", "priormodelcases.jld2"), priormodelcases)
+end
+
+priorsvaluequantiles = Vector{Vector{Vector{Float64}}}(undef, 7)
+Threads.@threads for i ∈ 1:7
+    priorsvaluequantiles[i] = fittedsimulationquantiles(
+        priormodeloutputs["priors$([ "01", "02", "04", "1", "2", "4", "6" ][i])"],
+        [ 0.025, 0.5, 0.975 ]
+    )
+end
+
+priorscasesquantiles = Vector{Vector{Vector{Float64}}}(undef, 7)
+Threads.@threads for i ∈ 1:7
+    priorscasesquantiles[i] = fittedsimulationquantiles(
+        priormodelcases["priors$([ "01", "02", "04", "1", "2", "4", "6" ][i])"], 
+        [ 0.025, 0.5, 0.975 ]
+    )
+end

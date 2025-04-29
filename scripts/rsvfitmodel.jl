@@ -1,26 +1,28 @@
 
 @model function fitmodel(
     incidence, prob, cbs, saveat;
-    betazeroprior=Exponential(150),
-    betaoneprior=Uniform(0, 0.9),
-    phiprior=Uniform(-π, π),
-    psiprior=Exponential(1),
+    rzeroprior=Gamma(2/3, 3),
+    betaoneprior=Beta(1, 4),
+    phiprior=truncated(Normal(0, π/2), -π, π),
+    psiprior_t=TDist(2),
     betareduction1prior=Beta(4, 1),
     betareduction2prior=Beta(9, 1),
-    omega=2.0,
-    detectionprior=Beta(1, 98)
+    omega,
+    detectionprior=Beta(1, 49)
 )
-    β0 ~ betazeroprior
+    mean_R0 ~ rzeroprior
     β1 ~ betaoneprior
     ϕ ~ phiprior
-    γ = 48.7  # generation time 7.5 days
-    μ = 0.0087  # Scotland's birth rate = 48000 / 5.5e6
-    ψ ~ psiprior
+    ψt ~ psiprior_t
     ω = omega
     βreduction1 ~ betareduction1prior
     βreduction2 ~ betareduction2prior
     detection ~ detectionprior
 
+    γ = 48.7  # generation time 7.5 days
+    μ = 0.0087  # Scotland's annual birth rate = 48000 / 5.5e6
+    β0 = mean_R0 * 48.7087
+    ψ = exp(0.7 * ψt) 
     p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, β0, βreduction1 * β0, βreduction2 * β0)
     u0 = sirns_u0(0.01, 2e-5; p, equalrs=true, t0=1996.737)  # 10 years before data collection
 

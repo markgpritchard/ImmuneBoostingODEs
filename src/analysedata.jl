@@ -91,26 +91,28 @@ end
 function runfittedsimulations(df, omega, saveat, cbs)
     modelmat = Matrix{Union{Missing, Float64}}(missing, length(saveat) - 1, size(df, 1))
     prob = fittedsimulationsetup(saveat)
-    for i ∈ axes(df, 1)
+    Threads.@threads for i ∈ axes(df, 1)
+        β0 = df.mean_R0[i] * 48.7087
+        ψ = exp(0.4 * df.ψt[i])
         p = SirnsParameters(
-            df.β0[i], 
+            β0, 
             df.β1[i], 
             df.ϕ[i], 
             48.7, 
             0.0087, 
-            df.ψ[i], 
+            ψ, 
             omega, 
-            df.β0[i], 
-            df.βreduction1[i] * df.β0[i], 
-            df.βreduction2[i] * df.β0[i]
+            β0, 
+            df.βreduction1[i] * β0, 
+            df.βreduction2[i] * β0
         )
         u0 = sirns_u0(0.01, 2e-5; p, equalrs=true, t0=1996.737)
         sol = memosolver(
             prob, Vern9(; lazy=false); 
             p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=1e8, 
         )
+        sol.retcode != :Success && continue  # `modelmat[:, i]` will remain `missing`
         cumulativecases = modelcompartments(sol, :cc)
-        sol.retcode != :Success && continue
         modelmat[:, i] = casespertimeblock(cumulativecases) .* 5_450_000 .* df.detection[i]
     end
     return modelmat

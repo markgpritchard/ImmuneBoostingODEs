@@ -79,13 +79,27 @@ function sirns_u0(S0::S, I0::S; p, equalrs=false, kwargs...) where S
     end 
 end 
 
-function sirns_u0(S0::S, I0, R1, R2, R3; p, t0 = 0) where S
+function sirns_u0(S0, I0, R1, R2, R3; p, t0=0) 
+    return _sirns_u0(S0, I0, R1, R2, R3, p, t0)
+end 
+
+function _sirns_u0(S0, I0, R1, R2, R3, p::SirnsParameters, t0)
+    phi = p.ϕ
+    return __sirns_u0(S0, I0, R1, R2, R3, phi, t0)
+end 
+
+function _sirns_u0(S0, I0, R1, R2, R3, p::SirnsParameters{T}, t0) where T <: ForwardDiff.Dual
+    phi = ForwardDiff.value(p.ϕ)
+    return __sirns_u0(S0, I0, R1, R2, R3, phi, t0)
+end 
+
+function __sirns_u0(S0::S, I0, R1, R2, R3, phi::Number, t0) where S
     @assert +(S0, I0, R1, R2, R3) ≈ 1 "+($S0, $I0, $R1, $R2, $R3) = $(+(S0, I0, R1, R2, R3)) != 1"
     @assert min(S0, I0, R1, R2, R3) >= -1e-6 "min($S0, $I0, $R1, $R2, $R3) = $(min(S0, I0, R1, R2, R3)) < 0"
     u0 = Vector{S}(undef, 8)
     for (i, v) ∈ enumerate([ S0, I0, R1, R2, R3 ]) u0[i] = v end  
-    u0[6] = cos(2π * t0 - p.ϕ)  # x1 
-    u0[7] = sin(2π * t0 - p.ϕ)  # x2
+    u0[6] = cos(2π * t0 - phi)  # x1 
+    u0[7] = sin(2π * t0 - phi)  # x2
     u0[8] = zero(S)  # cumulative cases
     return u0
 end 
