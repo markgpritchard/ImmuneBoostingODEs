@@ -36,7 +36,7 @@ include("rsvfitmodel.jl")
 #const constcases = data.Cases
 #=
 transformtheta(x) = exp(x) / (1 + exp(x)) =#
-
+#=
 function transformforoptim(v)
     @assert length(v) == 7 
     return [
@@ -132,22 +132,40 @@ let
         optimvalues[i] = transformintooptim(Optim.minimizer(r))
     end
 end
-#=
+=#
+
 pathfindervalues = multipathfinder(
     fitmodel(data.Cases, prob, cbs, saveat; omega), 
     1000; 
     executor=ThreadedEx(),
-    init=optimvalues,
-    maxtime=1000,
+    init=[
+        [ 1.0, 0.001, 0.0, -7.0, 0.95, 0.975, 0.01 ],
+        [ 1.0, 0.001, 0.0, -7.0, 0.5, 0.75, 0.01 ],
+        [ 1.0, 0.001, 0.0, 3.0, 0.95, 0.975, 0.01 ],
+        [ 1.0, 0.001, 0.0, 3.0, 0.5, 0.75, 0.01 ],
+        [ 1.0, 0.5, 0.0, -7.0, 0.95, 0.975, 0.01 ],
+        [ 1.0, 0.5, 0.0, -7.0, 0.5, 0.75, 0.01 ],
+        [ 1.0, 0.5, 0.0, 3.0, 0.95, 0.975, 0.01 ],
+        [ 1.0, 0.5, 0.0, 3.0, 0.5, 0.75, 0.01 ],
+        [ 10.0, 0.001, 0.0, -7.0, 0.95, 0.975, 0.01 ],
+        [ 10.0, 0.001, 0.0, -7.0, 0.5, 0.75, 0.01 ],
+        [ 10.0, 0.001, 0.0, 3.0, 0.95, 0.975, 0.01 ],
+        [ 10.0, 0.001, 0.0, 3.0, 0.5, 0.75, 0.01 ],
+        [ 10.0, 0.5, 0.0, -7.0, 0.95, 0.975, 0.01 ],
+        [ 10.0, 0.5, 0.0, -7.0, 0.5, 0.75, 0.01 ],
+        [ 10.0, 0.5, 0.0, 3.0, 0.95, 0.975, 0.01 ],
+        [ 10.0, 0.5, 0.0, 3.0, 0.5, 0.75, 0.01 ],
+    ],
+    maxtime=7200,
 )
-=#
+
 chain = sample(
     fitmodel(data.Cases, prob, cbs, saveat; omega),
     Turing.NUTS(0.65),
     MCMCThreads(),
     n_rounds,
     16;
-    initial_params=optimvalues,
+    init_params=collect.(eachrow(result_multi.draws_transformed.value[1:n_chains, :, 1])),
 )
 
 #=
@@ -215,11 +233,12 @@ chain = sample(
 
 chaindict = Dict(
     "chain" => chain,
-    "optimvalues" => optimvalues,
+    "pathfindervalues" => pathfindervalues,
 )
 
 safesave(datadir("sims", "chain_omega_$(omega)_nrounds_$(n_rounds).jld2"), chaindict)
 
-
+#=
 chaindf = DataFrame(chain)
 plotchains(chaindf)
+=#
