@@ -2,16 +2,21 @@
 using DrWatson
 
 @quickactivate :ImmuneBoostingODEs
-using DataFrames, DifferentialEquations, Optim, Random, Turing
+#using AdvancedHMC, DataFrames, DifferentialEquations, Optim, Pathfinder, Random, Turing
+using AdvancedHMC, DataFrames, DifferentialEquations, Optim, Random, Turing
+#using AdvancedHMC, DataFrames, DifferentialEquations, Pathfinder, Random, Turing
+#using Transducers: ThreadedEx
 
 testrun = true 
 
 if length(ARGS) == 2 
     omega = parse(Float64, ARGS[1])
     n_rounds = parse(Int, ARGS[2])
+    optimiterations = 50_000
 else
     omega = 2.0
     n_rounds = testrun ? 25 : 10_000
+    optimiterations = testrun ? 1000 : 10_000
 end
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -29,20 +34,45 @@ prob = fittedsimulationsetup(saveat)
 include("rsvfitmodel.jl")
 
 #const constcases = data.Cases
+#=
+transformtheta(x) = exp(x) / (1 + exp(x)) =#
 
-transformtheta(x) = exp(x) / (1 + exp(x))
+function transformforoptim(v)
+    @assert length(v) == 7 
+    return [
+        v[1],
+        _transformforoptim(v[2]),
+        _transformforoptim(v[3] / 2π + 0.5),
+        v[4],
+        _transformforoptim(v[5]),
+        _transformforoptim(v[6]),
+        _transformforoptim(v[7]),
+    ]
+end
+
+_transformforoptim(x) = log(x / (1 - x))
+
+function transformintooptim(v)
+    @assert length(v) == 7 
+    return [
+        v[1],
+        _transformintooptim(v[2]),
+        2π * _transformintooptim(v[3]) - π,
+        v[4],
+        _transformintooptim(v[5]),
+        _transformintooptim(v[6]),
+        _transformintooptim(v[7]),
+    ]
+end
+
+_transformintooptim(x) = exp(x) / (1 + exp(x))
 
 function optimmodel(paramvector, ω, data; callback, saveat)
     # take any real values in paramvector and transform into "acceptable" values 
-    R0, _β1, _ϕ, ψt, _reduce1, _reduce2, _detection = paramvector
+    R0, β1, ϕ, ψt, reduce1, reduce2, detection = transformintooptim(paramvector)
     if R0 < 0
         return Inf
     end
-    β1 = transformtheta(_β1)
-    ϕ = 2π * transformtheta(_ϕ) - π
-    reduce1 = transformtheta(_reduce1)
-    reduce2 = transformtheta(_reduce2)
-    detection = transformtheta(_detection)
     ψ = exp(0.7 * ψt)
 
     β0 = R0 * 48.7087
@@ -72,41 +102,73 @@ function optimmodel(paramvector, ω, data; callback, saveat)
     return sum([ abs2(data[i] - incidentcases[i]) for i ∈ eachindex(data) ])
 end
 
-result1 = optimize(
-    x -> optimmodel(x, omega, data.Cases; callback=cbs, saveat), 
-    [ 1.0, -2.0, 0.0, 4.0, 1.0, 2.0, -4.5 ], 
-    NelderMead(), 
-    Optim.Options(; iterations=5000)
+optimvalues = Vector{Vector{Float64}}(undef, 16) 
+let 
+    initvalues = [
+        [ 1.0, 0.001, 0.0, -7.0, 0.95, 0.975, 0.01 ],
+        [ 1.0, 0.001, 0.0, -7.0, 0.5, 0.75, 0.01 ],
+        [ 1.0, 0.001, 0.0, 3.0, 0.95, 0.975, 0.01 ],
+        [ 1.0, 0.001, 0.0, 3.0, 0.5, 0.75, 0.01 ],
+        [ 1.0, 0.5, 0.0, -7.0, 0.95, 0.975, 0.01 ],
+        [ 1.0, 0.5, 0.0, -7.0, 0.5, 0.75, 0.01 ],
+        [ 1.0, 0.5, 0.0, 3.0, 0.95, 0.975, 0.01 ],
+        [ 1.0, 0.5, 0.0, 3.0, 0.5, 0.75, 0.01 ],
+        [ 10.0, 0.001, 0.0, -7.0, 0.95, 0.975, 0.01 ],
+        [ 10.0, 0.001, 0.0, -7.0, 0.5, 0.75, 0.01 ],
+        [ 10.0, 0.001, 0.0, 3.0, 0.95, 0.975, 0.01 ],
+        [ 10.0, 0.001, 0.0, 3.0, 0.5, 0.75, 0.01 ],
+        [ 10.0, 0.5, 0.0, -7.0, 0.95, 0.975, 0.01 ],
+        [ 10.0, 0.5, 0.0, -7.0, 0.5, 0.75, 0.01 ],
+        [ 10.0, 0.5, 0.0, 3.0, 0.95, 0.975, 0.01 ],
+        [ 10.0, 0.5, 0.0, 3.0, 0.5, 0.75, 0.01 ],
+    ]
+    Threads.@threads for i ∈ 1:16
+        r = optimize(
+            x -> optimmodel(x, omega, data.Cases; callback=cbs, saveat), 
+            transformforoptim(initvalues[i]), 
+            NelderMead(), 
+            Optim.Options(; iterations=optimiterations)
+        )
+        optimvalues[i] = transformintooptim(Optim.minimizer(r))
+    end
+end
+#=
+pathfindervalues = multipathfinder(
+    fitmodel(data.Cases, prob, cbs, saveat; omega), 
+    1000; 
+    executor=ThreadedEx(),
+    init=optimvalues,
+    maxtime=1000,
 )
-result2 = optimize(
-    x -> optimmodel(x, omega, data.Cases; callback=cbs, saveat), 
-    [ 2.0, -2.0, 0.0, -4.0, 1.0, 2.0, -4.5 ], 
-    NelderMead(), 
-    Optim.Options(; iterations=5000)
-)
-result3 = optimize(
-    x -> optimmodel(x, omega, data.Cases; callback=cbs, saveat), 
-    [ 3.0, -2.0, 0.0, 4.0, 1.0, 2.0, -4.5 ], 
-    NelderMead(), 
-    Optim.Options(; iterations=5000)
-)
-result4 = optimize(
-    x -> optimmodel(x, omega, data.Cases; callback=cbs, saveat), 
-    [ 10.0, -2.0, 0.0, -4.0, 1.0, 2.0, -4.5 ], 
-    NelderMead(), 
-    Optim.Options(; iterations=5000)
+=#
+chain = sample(
+    fitmodel(data.Cases, prob, cbs, saveat; omega),
+    Turing.NUTS(0.65),
+    MCMCThreads(),
+    n_rounds,
+    16;
+    initial_params=optimvalues,
 )
 
-initvalues1 = Optim.minimizer(result1)
-initvalues2 = Optim.minimizer(result2)
-initvalues3 = Optim.minimizer(result3)
-initvalues4 = Optim.minimizer(result4)
+#=
+
+
+chain = sample(
+    fitmodel(data.Cases, prob, cbs, saveat; omega),
+    NUTS(0.65),
+    MCMCThreads(),
+    n_rounds,
+    4;
+    init_params=collect.(eachrow(result_multi.draws_transformed.value[1:n_chains, :, 1])),
+)
+
+
 
 Random.seed!(round(Int, omega * 100))
 
 chain = sample(
     fitmodel(data.Cases, prob, cbs, saveat; omega),
-    NUTS(0.65),
+    NUTS(5000, 0.65),
     MCMCThreads(),
     n_rounds,
     4;
@@ -149,13 +211,15 @@ chain = sample(
         ]
     ],
 )
+=#
 
 chaindict = Dict(
     "chain" => chain,
-    "result0001" => result0001,
-    "result001" => result001,
-    "result01" => result01,
-    "result025" => result025,
+    "optimvalues" => optimvalues,
 )
 
 safesave(datadir("sims", "chain_omega_$(omega)_nrounds_$(n_rounds).jld2"), chaindict)
+
+
+chaindf = DataFrame(chain)
+plotchains(chaindf)

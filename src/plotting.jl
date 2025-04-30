@@ -553,7 +553,7 @@ end
 # Plot MCMC trace plots
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-function plotchains(data::DataFrame; size=( 400, 800 ), kwargs...)
+function plotchains(data::DataFrame; size=( 400, 800 ), loopcolours=true, kwargs...)
     @unpack colnames, plotnames_ind = _processplotchains(data; kwargs...)
         
     fig = Figure(; size)
@@ -561,7 +561,13 @@ function plotchains(data::DataFrame; size=( 400, 800 ), kwargs...)
     for (j, chainid) ∈ enumerate(unique(data.chain))
         inds = findall(x -> x == chainid, data.chain)
         for (i, k) ∈ enumerate(plotnames_ind) 
-            lines!(ax[i], getproperty(data, colnames[k])[inds]; color=COLOURVECTOR[j])
+            if loopcolours && j > 7 
+                modj = mod(j, 7)
+                color = modj == 0 ? COLOURVECTOR[7] : COLOURVECTOR[modj]
+            else
+                color = COLOURVECTOR[j]
+            end
+            lines!(ax[i], getproperty(data, colnames[k])[inds]; color)
             Label(fig.layout[i, 0], "$(colnames[k])"; rotation=π/2, tellheight=false)
         end
     end

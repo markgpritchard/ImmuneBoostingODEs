@@ -3,6 +3,7 @@ authors = ["Mark Pritchard <mark.pritchard@ndm.ox.ac.uk>"]
 version = "0.2.0"
 
 [deps]
+AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
@@ -12,14 +13,15 @@ DrWatson = "634d3b9d-ee7a-5ddf-bec9-22491ea816e1"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-MakieTeX = "6d554a22-29e7-47bd-aee5-0c5f06619414"
 Memoization = "6fafb56a-5788-4b4e-91ca-c0cea6611c73"
 Optim = "429524aa-4258-5aef-a3af-852621145aeb"
+Pathfinder = "b1d3bc72-d0e7-4279-b92f-7fa5d6d2d454"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 PlotFormatting = "fafed4c3-eaab-4ef5-9b79-61964d847033"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+Transducers = "28d57a85-8fef-5791-bfe6-a80928e7c999"
 Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [compat]
