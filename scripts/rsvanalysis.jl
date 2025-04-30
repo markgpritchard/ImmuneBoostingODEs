@@ -3,9 +3,9 @@ using DrWatson
 
 @quickactivate :ImmuneBoostingODEs
 #using AdvancedHMC, DataFrames, DifferentialEquations, Optim, Pathfinder, Random, Turing
-using AdvancedHMC, DataFrames, DifferentialEquations, Optim, Random, Turing
-#using AdvancedHMC, DataFrames, DifferentialEquations, Pathfinder, Random, Turing
-#using Transducers: ThreadedEx
+#using AdvancedHMC, DataFrames, DifferentialEquations, Optim, Random, Turing
+using AdvancedHMC, DataFrames, DifferentialEquations, Pathfinder, Random, Turing
+using Transducers: ThreadedEx
 
 testrun = true 
 
