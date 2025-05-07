@@ -2,7 +2,7 @@
 
 julia_version = "1.11.3"
 manifest_format = "2.0"
-project_hash = "380fc0fb6e8faa9b1b2646dc7f6d97b6abd26dd3"
+project_hash = "59933830932e3be85aacde7976bc2c362333f89a"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "e2478490447631aedba0823d4d7a80b2cc8cdb32"
@@ -2149,9 +2149,9 @@ version = "0.4.6"
 
 [[deps.Optimization]]
 deps = ["ADTypes", "ArrayInterface", "ConsoleProgressMonitor", "DocStringExtensions", "LBFGSB", "LinearAlgebra", "Logging", "LoggingExtras", "OptimizationBase", "Printf", "ProgressLogging", "Reexport", "SciMLBase", "SparseArrays", "TerminalLoggers"]
-git-tree-sha1 = "e72af10f1c6ffe2f295455c4c35534d713be62bb"
+git-tree-sha1 = "c8eaa77c745cff7e58affa7e325bc4b5168cf964"
 uuid = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
-version = "4.1.2"
+version = "4.2.0"
 
 [[deps.OptimizationBase]]
 deps = ["ADTypes", "ArrayInterface", "DifferentiationInterface", "DocStringExtensions", "FastClosures", "LinearAlgebra", "PDMats", "Reexport", "Requires", "SciMLBase", "SparseArrays", "SparseConnectivityTracer", "SparseMatrixColorings"]

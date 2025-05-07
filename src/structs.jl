@@ -12,6 +12,22 @@ struct SirnsParameters{T} <: AbstractParameters where T
     originalβ0  :: T
     reducedβ0   :: T
     restoredβ0  :: T
+
+    function SirnsParameters(
+        β0::T, β1::T, ϕ::T, γ, μ, ψ::T, ω, originalβ0::T, reducedβ0::T, restoredβ0::T
+    ) where T
+        β0 >= 0 || throw(DomainError(β0, "β0 must not be negative"))
+        0 <= β1 <= 1 || throw(DomainError(β1, "β1 is a proportion and must be between 0 and 1"))
+        -π <= ϕ <= π || throw(DomainError(ϕ, "ϕ must be between -π and π"))
+        γ >= 0 || throw(DomainError(γ, "γ must not be negative"))
+        μ >= 0 || throw(DomainError(μ, "μ must not be negative"))
+        ψ >= 0 || throw(DomainError(ψ, "ψ must not be negative"))
+        ω >= 0 || throw(DomainError(ω, "ω must not be negative"))
+        originalβ0  >= 0 || throw(DomainError(originalβ0, "originalβ0 must not be negative"))
+        reducedβ0 >= 0 || throw(DomainError(reducedβ0, "reducedβ0 must not be negative"))
+        restoredβ0 >= 0 || throw(DomainError(restoredβ0, "ωrestoredβ0 must not be negative"))
+        return new{T}(β0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0)
+    end
 end     
 
 struct LambdaParms <: AbstractParameters 
@@ -37,24 +53,16 @@ function SirnsParameters(β0::T, γ, μ, ψ::T, ω::T) where T
     return SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω) 
 end 
 
-function SirnsParameters(β0::T, γ::T, μ::T, ψ::Integer, ω::T) where T <: Float64
-    return SirnsParameters(β0, γ, μ, Float64(ψ), ω)
-end
-
 function SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω) 
     return SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, β0, β0, β0) 
 end
 
-# function to ensure consistency with older code 
-function SirnsParameters(β0::T, β1::T, ϕ::T, γ, μ, ψ::T, ω::T, βreduction1, βreduction2) where T
-    return SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, β0, β0 * βreduction1, β0 * βreduction2) 
+function SirnsParameters(
+    β0::T, β1::T, ϕ::T, γ, μ, ψ::Integer, ω, originalβ0::T, reducedβ0::T, restoredβ0::T
+) where T
+    return SirnsParameters(β0, β1, ϕ, γ, μ, T(ψ), ω, originalβ0, reducedβ0, restoredβ0)
 end
 
-function SirnsParameters(
-    β0::T, β1::T, ϕ::T, γ, μ, ψ::Integer, ω::T, βreduction1, βreduction2
-) where T <: Float64
-    return SirnsParameters(β0, β1, ϕ, γ, μ, Float64(ψ), ω, βreduction1, βreduction2) 
-end
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Imported functions for structs

@@ -1,33 +1,12 @@
 
-using DataFrames, DifferentialEquations, DynamicPPL, Optim, Random, Turing
+using DataFrames, DifferentialEquations, Random, Turing
 
-include("rsvsetup.jl")
-include("rsvfitmodel.jl")
+include("samplepriors.jl")
 
 poissoncases(::Missing) = missing 
 poissoncases(x::Number) = rand(Poisson(x))
 
 Random.seed!(1729)
-
-if isfile(datadir("sims", "priorsdict.jld2"))
-    @info "Loading prior values"
-    priorsdict = load(datadir("sims", "priorsdict.jld2"))
-else
-    priorsdict = let 
-        pd = Dict{String, Chains}()
-        names = [ "priors$x" for x ∈ [ "01", "02", "04", "1", "2", "4", "6" ] ]
-        omegas = [ 0.1, 0.2, 0.4, 1.0, 2.0, 4.0, 6.0 ]
-        for i ∈ 1:7 
-            @info "Sampling for ω=$(omegas[i])"
-            prob = fittedsimulationsetup(saveat)
-            m = fitmodel(data.Cases, prob, cbs, saveat; omega=omegas[i])
-            p = sample(m, Prior(), MCMCThreads(), 1000, 4)
-            push!(pd, names[i] => p)
-        end
-        pd
-    end
-    safesave(datadir("sims", "priorsdict.jld2"), priorsdict)
-end
 
 if isfile(datadir("sims", "priormodeloutputs.jld2"))
     @info "Loading prior model outputs"
