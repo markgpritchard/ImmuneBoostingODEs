@@ -1,12 +1,20 @@
 
 module ImmuneBoostingODEs 
 
-using CairoMakie, CSV, DataFrames, DifferentialEquations, DrWatson, FFTW, ForwardDiff
-using PlotFormatting, StatsBase
+import Base: ==, hash
+
+using CSV
+using CairoMakie
+using DataFrames
+using DifferentialEquations
+using DrWatson
+using FFTW
+using ForwardDiff
 using LinearAlgebra: eigen
 using Memoization: @memoize
+using PlotFormatting
 using Roots: ZeroProblem
-import Base: ==, hash
+using StatsBase
 
 include("structs.jl")
 include("consts.jl")
@@ -53,6 +61,8 @@ export
     run_sirns, 
     sirns!, 
     sirns_u0, 
+    sirns_u0_transformedp,
+    transformedsirns!,
     ## analysedata.jl
     fittedsimulationquantiles, 
     fittedsimulationsetup, 

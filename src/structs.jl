@@ -30,14 +30,6 @@ struct SirnsParameters{T} <: AbstractParameters where T
     end
 end     
 
-struct LambdaParms <: AbstractParameters 
-    λ           :: Float64 
-    γ           :: Float64 
-    μ           :: Float64 
-    ψ           :: Float64 
-    ω           :: Float64 
-end   
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Additional functions for structs

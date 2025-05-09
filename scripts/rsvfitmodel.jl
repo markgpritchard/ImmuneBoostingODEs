@@ -36,32 +36,24 @@ end
     pparameter_tprior=TDist(2),
     detection_tprior=TDist(2),
 )
-    rzero_t ~ rzero_tprior
-    betaone_t ~ betaone_tprior
-    phi_t ~ phi_tprior
-    psi_t ~ psi_tprior
-    betareduction1_t ~ betareduction1_tprior
-    betareduction2_t ~ betareduction2_tprior
+    logr0 ~ rzero_tprior
+    logitβ1 ~ betaone_tprior
+    logitϕ ~ phi_tprior
+    logψ ~ psi_tprior
+    logitreduction1 ~ betareduction1_tprior
+    logitreduction2 ~ betareduction2_tprior
     pparameter_t ~ pparameter_tprior
     detection_t ~ detection_tprior
 
-    γ = 48.7  # generation time 7.5 days
-    μ = 0.0087  # Scotland's annual birth rate = 48000 / 5.5e6
-    ω = omega
-    p, pparameter, detection = _tranformmodelparameters(
-        ( 
-            rzero_t, 
-            betaone_t, 
-            phi_t, 
-            psi_t, 
-            betareduction1_t, 
-            betareduction2_t, 
-            pparameter_t, 
-            detection_t 
-        ); 
-        γ, μ, ω
-    )
-    u0 = sirns_u0(0.01, 2e-5; p, equalrs=true, t0=1996.737)  # 10 years before data collection
+    p = (logr0, logitβ1, logitϕ, logψ, logitreduction1, logitreduction2)
+    pparameter = _tranformmodelparameterproportion(1.5 * v[7])
+    if pparameter == 0
+        Turing.@addlogprob! -Inf
+        return nothing
+    end
+    detection = _tranformmodelparameterproportion(v[8] - 4.185)
+ 
+    u0 = sirns_u0_transformedp(0.01, 2e-5; omega, p, equalrs=true, t0=1996.737)  # 10 years before data collection
 
     sol = solve(
         prob, Vern9(; lazy=false); 
@@ -71,7 +63,7 @@ end
         saveat, 
         save_idxs=[ 8 ], 
         abstol=1e-15, 
-        maxiters=5e7,#1e8, 
+        maxiters=1e8, 
         verbose=false,
     )
     if sol.retcode != :Success

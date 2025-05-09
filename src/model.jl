@@ -3,14 +3,9 @@
 # The ODE model 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-function sirns!(du, u, p, t)
-    # Hard-coded to run with 3 resistant subcompartments 
-    S, I, R1, R2, R3, x1, x2, = u 
-
-    # transmission parameter
-    β = p.β0 * (1 + p.β1 * x1) 
-    λ = β * I
+function sirns!(du, u, p::AbstractParameters, t)
+    S, I, R1, R2, R3, x1, x2, = u
+    λ = _sirnslambda(p, u)
     
     du[1] = 3 * p.ω * R3 - λ * S + p.μ * (1 - S)                    # S
     du[2] = λ * S - (p.γ + p.μ) * I                                 # I
@@ -22,21 +17,62 @@ function sirns!(du, u, p, t)
     du[8] = λ * S                                                   # cumulative cases 
 end 
 
-function _sirns!(du, u, p, t, λ)
-    S, I, R1, R2, R3, x1, x2, cc = u
+function sirns!(du, u, p::Tuple, t)
+    S, I, R1, R2, R3, x1, x2, = u
+    β0, β1, ϕ, γ, μ, ψ, ω, = p
+    λ = _sirnslambda(p, u)
     
-    du[1] = 3 * p.ω * R3 - λ * S + p.μ * (1 - S)                    # S
-    du[2] = λ * S - (p.γ + p.μ) * I                                 # I
-    du[3] = p.γ * I + λ * p.ψ * (R2 + R3) - (3 * p.ω + p.μ) * R1    # R1
-    du[4] = 3 * p.ω * R1 - (3 * p.ω + λ * p.ψ + p.μ) * R2           # R2
-    du[5] = 3 * p.ω * R2 - (3 * p.ω + λ * p.ψ + p.μ) * R3           # R3
+    du[1] = 3 * ω * R3 - λ * S + μ * (1 - S)                        # S
+    du[2] = λ * S - (γ + μ) * I                                     # I
+    du[3] = γ * I + λ * ψ * (R2 + R3) - (3 * ω + μ) * R1            # R1
+    du[4] = 3 * ω * R1 - (3 * ω + λ * ψ + μ) * R2                   # R2
+    du[5] = 3 * ω * R2 - (3 * ω + λ * ψ + μ) * R3                   # R3
     du[6] = -2π * x2                                                # x1
     du[7] = 2π * x1                                                 # x2
     du[8] = λ * S                                                   # cumulative cases 
 end
 
-sirns!(du, u, p::LambdaParms, t) = constantlambda_sirns!(du, u, p, t)
-constantlambda_sirns!(du, u, p, t) = _sirns!(du, u, p, t, p.λ)
+function _sirnslambda(p::SirnsParameters, u)
+    S, I, R1, R2, R3, x1, = u
+    β = p.β0 * (1 + p.β1 * x1)
+    λ = β * I
+    return λ 
+end
+
+function _sirnslambda(p::Tuple, u)
+    β0, β1, = p
+    S, I, R1, R2, R3, x1, = u
+    β = β0 * (1 + β1 * x1)
+    λ = β * I
+    return λ 
+end
+
+function transformedsirns!(du, u, p, t; omega)
+    newparms = transformparameters(p; omega)
+    sirns!(du, u, newparms, t)
+end
+
+function transformparameters(p; omega, gamma=48.7, mu=0.0087)
+    logr0, logitβ1, logitϕ, logψ, logitreduction1, logitreduction2, = p
+
+    rzero = exp(logr0)
+    betazero = rzero * (gamma + mu)
+    newparms = SirnsParameters(
+        betazero,  # β0 
+        _logistic(1.5 * logitβ1),  # β1 
+        _logistic(logitϕ) * 2π - π,  # ϕ 
+        gamma,  # γ 
+        mu,  # μ 
+        exp(logψ),  # ψ 
+        omega,  # ω 
+        betazero,  # originalβ0 
+        betazero * _logistic(logitreduction1 + 1.386),  # reducedβ0 
+        betazero * _logistic(logitreduction2 + 1.386),  # restoredβ0 
+    )
+    return newparms 
+end
+
+_logistic(x) = 1 / (1 + exp(-x))
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -96,13 +132,30 @@ end
 function __sirns_u0(S0::S, I0, R1, R2, R3, phi::Number, t0) where S
     @assert +(S0, I0, R1, R2, R3) ≈ 1 "+($S0, $I0, $R1, $R2, $R3) = $(+(S0, I0, R1, R2, R3)) != 1"
     @assert min(S0, I0, R1, R2, R3) >= -1e-6 "min($S0, $I0, $R1, $R2, $R3) = $(min(S0, I0, R1, R2, R3)) < 0"
+    u0 = [
+        S0,
+        I0,
+        R1,
+        R2,
+        R3,
+        cos(2π * t0 - phi),  # x1 
+        sin(2π * t0 - phi),  # x2
+        zero(S),  # cumulative cases
+    ]
+    #=
     u0 = Vector{S}(undef, 8)
     for (i, v) ∈ enumerate([ S0, I0, R1, R2, R3 ]) u0[i] = v end  
     u0[6] = cos(2π * t0 - phi)  # x1 
     u0[7] = sin(2π * t0 - phi)  # x2
     u0[8] = zero(S)  # cumulative cases
+    =#
     return u0
 end 
+
+function sirns_u0_transformedp(args...; p, omega, kwargs...)
+    newparms = transformparameters(p; omega)
+    return sirns_u0(args...; p=newparms, kwargs...)
+end
 
 function modelcompartments(sol, p::T) where T <: Union{<:AbstractParameters, <:NamedTuple}
     inds = compartmentinds(sol)
@@ -140,7 +193,7 @@ end
 
 casespertimeblock(d::Dict{Symbol, <:Any}) = casespertimeblock(d[:cc])
 casespertimeblock(d::Dict{<:AbstractString, <:Any}) = casespertimeblock(d["cc"])
-
+#=
 function casespertimeblock(cc::Vector{T}) where T
     cases = Vector{T}(undef, length(cc) - 1)
     for i ∈ eachindex(cc)
@@ -157,6 +210,10 @@ function casespertimeblock(cc::Vector{T}) where T
     end
     return cases
 end
+=#
+casespertimeblock(cc::Vector) = [ _newcases(cc, t) for t ∈ 2:length(cc) ]
+
+_newcases(cc, t) = cc[t] - cc[t-1] < 0 ? zero(cc[t] - cc[t-1]) : cc[t] - cc[t-1]
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -189,18 +246,65 @@ end
 
 # Default callback functions used to simulate the effect of non-pharmaceutical interventions
 
-function reducetransmission!(integrator) 
-    @unpack β0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0 = integrator.p
-    integrator.p = SirnsParameters(
+reducetransmission!(integrator) = integrator.p = _reducetransmissionp(integrator.p)
+
+function _reducetransmissionp(p::SirnsParameters)
+    @unpack β0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0 = p
+    newp = SirnsParameters(
         reducedβ0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0
     )
+    return newp
+end
+
+function _reducetransmissionp(p::Tuple) 
+    logr0, logitβ1, logitϕ, logψ, logitreduction1, logitreduction2, logitdetection = p
+    newlogr0 = log(_logistic(logitreduction1)) + logr0
+    return ( 
+        newlogr0, 
+        logitβ1, 
+        logitϕ, 
+        logψ, 
+        logitreduction1, 
+        logitreduction2, 
+        logitdetection 
+    )
+end
+
+function _reducetransmissionp(p::AbstractVector) 
+    oldtuple = Tuple(p)
+    newtuple = _reducetransmissionp(oldtuple)
+    return [ newtuple... ]
 end
 
 # Callback function to restore βmean 
 
-function restoretransmission!(integrator) 
-    @unpack β0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0 = integrator.p
-    integrator.p = SirnsParameters(
+restoretransmission!(integrator) = integrator.p = _restoretransmissionp(integrator.p)
+
+function _restoretransmissionp(p::SirnsParameters)
+    @unpack β0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0 = p
+    newp = SirnsParameters(
         restoredβ0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0
     )
+    return newp
+end
+
+function _restoretransmissionp(p::Tuple) 
+    logr0, logitβ1, logitϕ, logψ, logitreduction1, logitreduction2, logitdetection = p
+    originallogr0 = logr0 - log(_logistic(logitreduction1))
+    newlogr0 = log(_logistic(logitreduction2)) + originallogr0
+    return ( 
+        newlogr0, 
+        logitβ1, 
+        logitϕ, 
+        logψ, 
+        logitreduction1, 
+        logitreduction2, 
+        logitdetection 
+    )
+end
+
+function _restoretransmissionp(p::AbstractVector) 
+    oldtuple = Tuple(p)
+    newtuple = _restoretransmissionp(oldtuple)
+    return [ newtuple... ]
 end
