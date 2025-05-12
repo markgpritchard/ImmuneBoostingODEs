@@ -15,20 +15,11 @@ using SciMLSensitivity
 using Turing
 using Zygote
 
-
-#using Transducers: ThreadedEx
-
-include("samplepriors.jl")
+#include("samplepriors.jl")
 
 testrun = true 
 
-if length(ARGS) == 2 
-    omega = parse(Float64, ARGS[1])
-    n_rounds = parse(Int, ARGS[2])
-else
-    omega = 2.0
-    n_rounds = testrun ? 25 : 10_000
-end
+n_rounds = testrun ? 25 : 10_000
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Load the data 
@@ -40,14 +31,11 @@ include("rsvsetup.jl")
 # Fitting parameters 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-@memoize omegaspecifictransformedsirns!(du, u, p, t) = transformedsirns!(du, u, p, t; omega)
-
 function loss(
     p; 
     data, 
     prob, 
     callback, 
-    omega,
     saveat,
     S0=0.1,
     I0=2e-5,
@@ -57,7 +45,7 @@ function loss(
     abstol=1e-15,
     maxiters=1e8,
 ) 
-    u0 = sirns_u0_transformedp(S0, I0; p, omega, equalrs, t0)
+    u0 = sirns_u0_transformedp(S0, I0; p, equalrs, t0)
     sol = solve(
         prob, alg; 
         p, u0, callback, saveat, abstol, maxiters,
@@ -75,11 +63,9 @@ function loss(
 end
 
 function optimizesirns(
-    odefunction,
     data,
     p;
     callback,
-    omega,
     saveat,
     S0=0.1,
     I0=2e-5,
@@ -92,8 +78,8 @@ function optimizesirns(
     optimizationsolvermaxiters=1e5,
     adtype=Optimization.AutoZygote(),
 )
-    u0 = sirns_u0_transformedp(S0, I0; p, omega, equalrs, t0)
-    prob = ODEProblem(odefunction, u0, tspan, p)
+    u0 = sirns_u0_transformedp(S0, I0; p, equalrs, t0)
+    prob = ODEProblem(transformedsirns!, u0, tspan, p)
     sol = solve(
         prob, alg; 
         p, u0, callback, saveat, abstol=odesolverabstol, maxiters=odesolvermaxiters,
@@ -108,7 +94,6 @@ function optimizesirns(
         (x, p) -> loss(
             x; 
             callback, 
-            omega,
             data, 
             prob, 
             saveat, 
@@ -128,8 +113,8 @@ function optimizesirns(
 end
 
 initial_params1 = optimizesirns(
-    omegaspecifictransformedsirns!, data.Cases, [ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 ];
-    callback=cbs, omega, saveat
+    data.Cases, [ 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 ];
+    callback=cbs, saveat
 )
 
 initial_params2 = optimizesirns(

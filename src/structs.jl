@@ -8,7 +8,7 @@ struct SirnsParameters{T} <: AbstractParameters where T
     γ           :: Float64
     μ           :: Float64 
     ψ           :: T
-    ω           :: Float64
+    ω           :: T
     originalβ0  :: T
     reducedβ0   :: T
     restoredβ0  :: T

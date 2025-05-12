@@ -47,13 +47,13 @@ function _sirnslambda(p::Tuple, u)
     return λ 
 end
 
-function transformedsirns!(du, u, p, t; omega)
-    newparms = transformparameters(p; omega)
+function transformedsirns!(du, u, p, t)
+    newparms = transformparameters(p)
     sirns!(du, u, newparms, t)
 end
 
-function transformparameters(p; omega, gamma=48.7, mu=0.0087)
-    logr0, logitβ1, logitϕ, logψ, logitreduction1, logitreduction2, = p
+function transformparameters(p; gamma=48.7, mu=0.0087)
+    logr0, logitβ1, logitϕ, logψ, logω, logitreduction1, logitreduction2, = p
 
     rzero = exp(logr0)
     betazero = rzero * (gamma + mu)
@@ -64,7 +64,7 @@ function transformparameters(p; omega, gamma=48.7, mu=0.0087)
         gamma,  # γ 
         mu,  # μ 
         exp(logψ),  # ψ 
-        omega,  # ω 
+        exp(logω),  # ω 
         betazero,  # originalβ0 
         betazero * _logistic(logitreduction1 + 1.386),  # reducedβ0 
         betazero * _logistic(logitreduction2 + 1.386),  # restoredβ0 
@@ -152,8 +152,8 @@ function __sirns_u0(S0::S, I0, R1, R2, R3, phi::Number, t0) where S
     return u0
 end 
 
-function sirns_u0_transformedp(args...; p, omega, kwargs...)
-    newparms = transformparameters(p; omega)
+function sirns_u0_transformedp(args...; p, kwargs...)
+    newparms = transformparameters(p)
     return sirns_u0(args...; p=newparms, kwargs...)
 end
 
