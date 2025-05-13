@@ -1,43 +1,64 @@
 
 abstract type AbstractParameters end
 
-struct SirnsParameters{T} <: AbstractParameters where T
-    β0          :: T
-    β1          :: T
-    ϕ           :: T
-    γ           :: Float64
-    μ           :: Float64 
-    ψ           :: T
-    ω           :: T
-    originalβ0  :: T
-    reducedβ0   :: T
-    restoredβ0  :: T
+@auto_hash_equals struct SirnsParameters{T} <: AbstractParameters where T
+    β0::T
+    β1::T
+    ϕ::T
+    γ::Float64
+    μ::Float64 
+    ψ::T
+    ω::T
+    originalβ0::T
+    betaprimemultiplier::T
+    finalbetaprime::T
+    proportiondetected::T
 
     function SirnsParameters(
-        β0::T, β1::T, ϕ::T, γ, μ, ψ::T, ω, originalβ0::T, reducedβ0::T, restoredβ0::T
+        β0::T, 
+        β1::T, 
+        ϕ::T, 
+        γ, 
+        μ, 
+        ψ::T, 
+        ω, 
+        originalβ0::T, 
+        betaprimemultiplier::T,
+        finalbetaprime::T, 
+        proportiondetected::T
     ) where T
         β0 >= 0 || throw(DomainError(β0, "β0 must not be negative"))
-        0 <= β1 <= 1 || throw(DomainError(β1, "β1 is a proportion and must be between 0 and 1"))
+        0 <= β1 <= 1 || throw(_proportionerror(β1, "β1"))
         -π <= ϕ <= π || throw(DomainError(ϕ, "ϕ must be between -π and π"))
         γ >= 0 || throw(DomainError(γ, "γ must not be negative"))
         μ >= 0 || throw(DomainError(μ, "μ must not be negative"))
         ψ >= 0 || throw(DomainError(ψ, "ψ must not be negative"))
         ω >= 0 || throw(DomainError(ω, "ω must not be negative"))
         originalβ0  >= 0 || throw(DomainError(originalβ0, "originalβ0 must not be negative"))
-        reducedβ0 >= 0 || throw(DomainError(reducedβ0, "reducedβ0 must not be negative"))
-        restoredβ0 >= 0 || throw(DomainError(restoredβ0, "ωrestoredβ0 must not be negative"))
-        return new{T}(β0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0)
+        0 <= betaprimemultiplier <= 1 || throw(
+            _proportionerror(betaprimemultiplier, "betaprimemultiplier")
+        )
+        finalbetaprime >= 0 || throw(
+            DomainError(finalbetaprime, "finalbetaprime must not be negative")
+        )
+        0 <= proportiondetected <= 1 || throw(
+            _proportionerror(proportiondetected, "proportiondetected")
+        )
+        return new{T}(
+            β0, 
+            β1, 
+            ϕ, 
+            γ, 
+            μ, 
+            ψ, 
+            ω, 
+            originalβ0, 
+            betaprimemultiplier, 
+            finalbetaprime, 
+            proportiondetected
+        )
     end
 end     
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Additional functions for structs
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# When parameters are needed for a model with constant transmission parameter then it is
-# more convenient not to need to enter values for A and δ. Equally, if no non-pharmaceutical
-# interventions are simulated, do not need to provide reducedβ0 or restoredβ0 explicitly
 
 function SirnsParameters(β0::T, γ, μ, ψ::T, ω::T) where T  
     β1 = zero(T)
@@ -45,41 +66,69 @@ function SirnsParameters(β0::T, γ, μ, ψ::T, ω::T) where T
     return SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω) 
 end 
 
-function SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω) 
-    return SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, β0, β0, β0) 
+function SirnsParameters(β0::T, β1, ϕ, γ, μ, ψ::T, ω::T) where T  
+    betaprimemultiplier = one(T)
+    finalbetaprime = one(T)
+    return SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, β0, betaprimemultiplier, finalbetaprime) 
 end
 
 function SirnsParameters(
-    β0::T, β1::T, ϕ::T, γ, μ, ψ::Integer, ω, originalβ0::T, reducedβ0::T, restoredβ0::T
+    β0::T, 
+    β1, 
+    ϕ, 
+    γ, 
+    μ,
+    ψ::T,
+    ω::T, 
+    originalβ0, 
+    betaprimemultiplier, 
+    finalbetaprime
+) where T  
+    proportiondetected = one(T)
+    return SirnsParameters(
+        β0, 
+        β1, 
+        ϕ, 
+        γ, 
+        μ, 
+        ψ, 
+        ω, 
+        β0, 
+        betaprimemultiplier, 
+        finalbetaprime, 
+        proportiondetected
+    ) 
+end
+
+function SirnsParameters(
+    β0::T, 
+    β1::T, 
+    ϕ::T, 
+    γ, 
+    μ, 
+    ψ::Integer, 
+    ω, 
+    originalβ0::T, 
+    betaprimemultiplier::T,
+    finalbetaprime::T, 
+    proportiondetected::T
 ) where T
-    return SirnsParameters(β0, β1, ϕ, γ, μ, T(ψ), ω, originalβ0, reducedβ0, restoredβ0)
+    return SirnsParameters(
+        β0, 
+        β1, 
+        ϕ, 
+        γ, 
+        μ, 
+        T(ψ), 
+        ω, 
+        originalβ0, 
+        betaprimemultiplier, 
+        finalbetaprime, 
+        proportiondetected
+    )
 end
 
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Imported functions for structs
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Function to show that two sets of parameters are equal. May assist in identifying repeat
-# instances for `@memoize`.
-
-function ==(a::SirnsParameters, b::SirnsParameters)
-    return a.β0 == b.β0 && 
-        a.β1 == b.β1 && 
-        a.ϕ == b.ϕ && 
-        a.γ == b.γ && 
-        a.μ == b.μ && 
-        a.ψ == b.ψ && 
-        a.ω == b.ω && 
-        a.originalβ0 == b.originalβ0 && 
-        a.reducedβ0 == b.reducedβ0 && 
-        a.restoredβ0 == b.restoredβ0 
-end
-
-function hash(a::SirnsParameters)
-    x = hash(a.β0)
-    for i ∈ [ :β1, :ϕ, :γ, :μ, :ψ, :ω, :originalβ0, :reducedβ0, :restoredβ0 ]
-        x = hash(getproperty(a, i), x)
-    end
-    return x
+function _proportionerror(parameter, parameterstring)
+    _text = "$parameterstring is a proportion and must be between 0 and 1"
+    return DomainError(parameter, _text)
 end

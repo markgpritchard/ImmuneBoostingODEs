@@ -65,23 +65,41 @@ function processrsvdata(rawfilename, processedfilename)
     return processdata(processrsvdata, rawfilename, processedfilename)
 end
 
-function processcrgtvdata(filename)
-    data = CSV.read(filename, DataFrame)
-
-    # Select rows describing Scotland 
-    subset!(data, :RegionName => x -> x .== "Scotland")
-
-    # Rename Date
-    rename!(data, :Date => :RawDate)
-
-    # Convert the dates to a proportion of the year 
-    processcsvdates!(data, :RawDate)
-
-    return data 
-end 
-
-function processcrgtvdata(rawfilename, processedfilename)
-    return processdata(processcrgtvdata, rawfilename, processedfilename)
+function processmobilitydata(fn1, fn2, fn3)
+    mobilitydata = CSV.read(datadir("exp_raw", fn1), DataFrame)
+    append!(mobilitydata, CSV.read(datadir("exp_raw", fn2), DataFrame))
+    append!(mobilitydata, CSV.read(datadir("exp_raw", fn3), DataFrame))
+    filter!(:sub_region_1 => ismissing, mobilitydata)
+    insertcols!(
+        mobilitydata, 
+        :gtdate => Dates.value.(mobilitydata.date .- Date("2016-10-03")) ./ 365 .+ 2016.76
+    )
+    # reduction is the mean of transit, workplace and retail, as used 
+    # by https://doi.org/10.1371/journal.pcbi.1012452
+    insertcols!(
+        mobilitydata, 
+        :rawreduction => [ 
+            +(
+                mobilitydata.transit_stations_percent_change_from_baseline[i],
+                mobilitydata.workplaces_percent_change_from_baseline[i],
+                mobilitydata.retail_and_recreation_percent_change_from_baseline[i],
+            ) / 3
+            for i ∈ axes(mobilitydata, 1)
+        ]
+    )
+    insertcols!(
+        mobilitydata, 
+        :proportionreduction => @. 1 + mobilitydata.rawreduction * 0.01
+    )
+    insertcols!(
+        mobilitydata, 
+        :reduction => [ 
+            mobilitydata.proportionreduction[1:6]; 
+            rollmean(mobilitydata.proportionreduction, 7) 
+        ]
+    )
+    select!(mobilitydata, :gtdate, :reduction)
+    return mobilitydata
 end
 
 function processcsvdates!(df, datecolumn)

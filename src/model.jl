@@ -7,30 +7,15 @@ function sirns!(du, u, p::AbstractParameters, t)
     S, I, R1, R2, R3, x1, x2, = u
     λ = _sirnslambda(p, u)
     
-    du[1] = 3 * p.ω * R3 - λ * S + p.μ * (1 - S)                    # S
-    du[2] = λ * S - (p.γ + p.μ) * I                                 # I
-    du[3] = p.γ * I + λ * p.ψ * (R2 + R3) - (3 * p.ω + p.μ) * R1    # R1
-    du[4] = 3 * p.ω * R1 - (3 * p.ω + λ * p.ψ + p.μ) * R2           # R2
-    du[5] = 3 * p.ω * R2 - (3 * p.ω + λ * p.ψ + p.μ) * R3           # R3
-    du[6] = -2π * x2                                                # x1
-    du[7] = 2π * x1                                                 # x2
-    du[8] = λ * S                                                   # cumulative cases 
+    du[1] = 3 * p.ω * R3 - λ * S + p.μ * (1 - S)  # S
+    du[2] = λ * S - (p.γ + p.μ) * I  # I
+    du[3] = p.γ * I + λ * p.ψ * (R2 + R3) - (3 * p.ω + p.μ) * R1  # R1
+    du[4] = 3 * p.ω * R1 - (3 * p.ω + λ * p.ψ + p.μ) * R2  # R2
+    du[5] = 3 * p.ω * R2 - (3 * p.ω + λ * p.ψ + p.μ) * R3  # R3
+    du[6] = -2π * x2  # x1
+    du[7] = 2π * x1  # x2
+    du[8] = λ * S  # cumulative cases 
 end 
-
-function sirns!(du, u, p::Tuple, t)
-    S, I, R1, R2, R3, x1, x2, = u
-    β0, β1, ϕ, γ, μ, ψ, ω, = p
-    λ = _sirnslambda(p, u)
-    
-    du[1] = 3 * ω * R3 - λ * S + μ * (1 - S)                        # S
-    du[2] = λ * S - (γ + μ) * I                                     # I
-    du[3] = γ * I + λ * ψ * (R2 + R3) - (3 * ω + μ) * R1            # R1
-    du[4] = 3 * ω * R1 - (3 * ω + λ * ψ + μ) * R2                   # R2
-    du[5] = 3 * ω * R2 - (3 * ω + λ * ψ + μ) * R3                   # R3
-    du[6] = -2π * x2                                                # x1
-    du[7] = 2π * x1                                                 # x2
-    du[8] = λ * S                                                   # cumulative cases 
-end
 
 function _sirnslambda(p::SirnsParameters, u)
     S, I, R1, R2, R3, x1, = u
@@ -39,7 +24,7 @@ function _sirnslambda(p::SirnsParameters, u)
     return λ 
 end
 
-function _sirnslambda(p::Tuple, u)
+function _sirnslambda(p::AbstractVector, u)
     β0, β1, = p
     S, I, R1, R2, R3, x1, = u
     β = β0 * (1 + β1 * x1)
@@ -53,23 +38,37 @@ function transformedsirns!(du, u, p, t)
 end
 
 function transformparameters(p; gamma=48.7, mu=0.0087)
-    logr0, logitβ1, logitϕ, logψ, logω, logitreduction1, logitreduction2, = p
+    r0, logitβ1, ϕ, logψ, logω, logitbetaprimemultiplier, logitfinalbetaprime, logitproportiondetected, betaprime = p
+    return SirnsParameters(
+        r0 * (gamma + mu) * betaprime,  # β0::T
+        _logistic(logitβ1),  # β1::T
+        ϕ,  # ϕ::T
+        gamma,  # γ::Float64
+        mu,  # μ::Float64 
+        exp(logψ),  # ψ::T
+        exp(logω),  # ω::T
+        r0 * (gamma + mu),  # originalβ0::T
+        _logistic(logitbetaprimemultiplier),  # betaprimemultiplier::T
+        _logistic(logitfinalbetaprime),  # finalbetaprime::T
+        _logistic(logitproportiondetected),  # proportiondetected::T
+    ) 
+end
 
-    rzero = exp(logr0)
-    betazero = rzero * (gamma + mu)
-    newparms = SirnsParameters(
-        betazero,  # β0 
-        _logistic(1.5 * logitβ1),  # β1 
-        _logistic(logitϕ) * 2π - π,  # ϕ 
-        gamma,  # γ 
-        mu,  # μ 
-        exp(logψ),  # ψ 
-        exp(logω),  # ω 
-        betazero,  # originalβ0 
-        betazero * _logistic(logitreduction1 + 1.386),  # reducedβ0 
-        betazero * _logistic(logitreduction2 + 1.386),  # restoredβ0 
-    )
-    return newparms 
+function transformparameterswithoutbetaprime(p; gamma=48.7, mu=0.0087)
+    r0, logitβ1, ϕ, logψ, logω, logitbetaprimemultiplier, logitfinalbetaprime, logitproportiondetected, = p
+    return SirnsParameters(
+        r0 * (gamma + mu),  # β0::T
+        _logistic(logitβ1),  # β1::T
+        ϕ,  # ϕ::T
+        gamma,  # γ::Float64
+        mu,  # μ::Float64 
+        exp(logψ),  # ψ::T
+        exp(logω),  # ω::T
+        r0 * (gamma + mu),  # originalβ0::T
+        _logistic(logitbetaprimemultiplier),  # betaprimemultiplier::T
+        _logistic(logitfinalbetaprime),  # finalbetaprime::T
+        _logistic(logitproportiondetected),  # proportiondetected::T
+    ) 
 end
 
 _logistic(x) = 1 / (1 + exp(-x))
@@ -153,7 +152,7 @@ function __sirns_u0(S0::S, I0, R1, R2, R3, phi::Number, t0) where S
 end 
 
 function sirns_u0_transformedp(args...; p, kwargs...)
-    newparms = transformparameters(p)
+    newparms = transformparameterswithoutbetaprime(p)
     return sirns_u0(args...; p=newparms, kwargs...)
 end
 

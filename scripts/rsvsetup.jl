@@ -1,6 +1,4 @@
-
 # This script is called by `rsvanalysis.jl` and `displayrsvanalysis.jl`
-
 
 # RSV data from Scotland
 data = processrsvdata("respiratory_scot.csv", "rsv.csv")
@@ -8,8 +6,12 @@ data = processrsvdata("respiratory_scot.csv", "rsv.csv")
 # Age-specific data
 agedata = processagedata("respiratory_age.csv", "rsv_age.csv")
 
-# Data from Oxford Covid-19 Government Response Tracker
-crgtdata = processcrgtvdata("OxCGRT_compact_subnational_v1.csv", "crgt.csv")
+# Mobility data
+mobilitydata = processmobilitydata(
+    "2020_GB_Region_Mobility_Report.csv", 
+    "2021_GB_Region_Mobility_Report.csv", 
+    "2022_GB_Region_Mobility_Report.csv"
+)
 
 # To avoid splitting outbreaks, count cases from April each year 
 let 
@@ -40,14 +42,92 @@ saveat = let
 end
 
 ## Callbacks  
-cbs = let 
-    # When is the infection parameter expected to change?
-    # Find dates (as fractions of year) when Strigency Index goes above then below 50
-    inds = findall(x -> x >= 50, crgtdata.StringencyIndex_Average)
-    reduceday = crgtdata.Date[inds[1]]
-    increaseday = crgtdata.Date[last(inds)]
-    save_positions = ( false, false )
-    resetcb = PresetTimeCallback(reduceday + 1e-9, reducetransmission!; save_positions)
-    rescb = PresetTimeCallback(increaseday, restoretransmission!; save_positions)
-    CallbackSet(resetcb, rescb)
+const MOBILITYCALLBACKTIMES = mobilitydata.gtdate
+const MOBILITYCALLBACKPROPORTIONS = mobilitydata.reduction
+
+function mobilityaffect!(integrator)
+    index = findfirst(x -> x >= integrator.t, MOBILITYCALLBACKTIMES)
+    reduction = 1 - MOBILITYCALLBACKPROPORTIONS[index] 
+    adjustedreduction = integrator.p.betaprimemultiplier * reduction
+    newbetazero = *(
+        integrator.p.originalβ0,
+        (1 - adjustedreduction)
+    ) 
+    newparameters = SirnsParameters(
+        newbetazero, 
+        integrator.p.β1, 
+        integrator.p.ϕ, 
+        integrator.p.γ, 
+        integrator.p.μ, 
+        integrator.p.ψ, 
+        integrator.p.ω, 
+        integrator.p.originalβ0, 
+        integrator.p.betaprimemultiplier,
+        integrator.p.finalbetaprime, 
+        integrator.p.proportiondetected
+    )
+    integrator.p = newparameters
 end
+
+function finalmobilityaffect!(integrator)
+    newbetazero = *(
+        integrator.p.originalβ0, 
+        integrator.p.finalbetaprime, 
+    ) 
+    newparameters = SirnsParameters(
+        newbetazero, 
+        integrator.p.β1, 
+        integrator.p.ϕ, 
+        integrator.p.γ, 
+        integrator.p.μ, 
+        integrator.p.ψ, 
+        integrator.p.ω, 
+        integrator.p.originalβ0, 
+        integrator.p.betaprimemultiplier,
+        integrator.p.finalbetaprime, 
+        integrator.p.proportiondetected
+    )
+    integrator.p = newparameters
+end
+
+cbs = let 
+    save_positions = ( false, false )
+    mobilitycb = PresetTimeCallback(MOBILITYCALLBACKTIMES, mobilityaffect!; save_positions)
+    finalmobilitycb = PresetTimeCallback(
+        last(MOBILITYCALLBACKTIMES) + 1 / 365, finalmobilityaffect!; 
+        save_positions
+    )
+    CallbackSet(mobilitycb, finalmobilitycb) 
+end
+
+optimearlyaffect!(integrator) = integrator.p[9] = 1.0
+
+function optimmobilityaffect!(integrator)
+    index = findfirst(x -> x >= integrator.t, MOBILITYCALLBACKTIMES)
+    reduction = 1 - MOBILITYCALLBACKPROPORTIONS[index] 
+    adjustedreduction = ImmuneBoostingODEs._logistic(integrator.p[6]) * reduction
+    integrator.p[9] = 1 - adjustedreduction
+end
+
+function optimfinalmobilityaffect!(integrator)
+    integrator.p[9] = ImmuneBoostingODEs._logistic(integrator.p[7])
+end
+
+optimcbs = let 
+    save_positions = ( false, false )
+    # reset `betaprime` which gets mutated in each iteration
+    optimearlycallback = PresetTimeCallback(
+        1996.737, optimearlyaffect!; 
+        save_positions
+    )
+    mobilitycb = PresetTimeCallback(
+        MOBILITYCALLBACKTIMES, optimmobilityaffect!; 
+        save_positions
+    )
+    finalmobilitycb = PresetTimeCallback(
+        last(MOBILITYCALLBACKTIMES) + 1 / 365, optimfinalmobilityaffect!; 
+        save_positions
+    )
+    CallbackSet(mobilitycb, finalmobilitycb) 
+end
+

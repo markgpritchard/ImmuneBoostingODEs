@@ -3,9 +3,11 @@ module ImmuneBoostingODEs
 
 import Base: ==, hash
 
+using AutoHashEquals: @auto_hash_equals
 using CSV
 using CairoMakie
 using DataFrames
+using Dates
 using DifferentialEquations
 using DrWatson
 using FFTW
@@ -13,6 +15,7 @@ using ForwardDiff
 using LinearAlgebra: eigen
 using Memoization: @memoize
 using PlotFormatting
+using RollingFunctions: rollmean
 using Roots: ZeroProblem
 using StatsBase
 
@@ -38,14 +41,14 @@ export
     ## processdata.jl
     printrawdate, 
     processagedata, 
-    processcrgtvdata, 
+    processmobilitydata,
     processrsvdata,
     ## equilibria.jl
     bifurcationlimits, 
     equil, 
     equileigen, 
     equili, 
-    equilplotdata, 
+    #equilplotdata, 
     equilr, 
     equilri, 
     equils, 
@@ -62,6 +65,7 @@ export
     sirns!, 
     sirns_u0, 
     sirns_u0_transformedp,
+    transformparameters,
     transformedsirns!,
     ## analysedata.jl
     fittedsimulationquantiles, 
