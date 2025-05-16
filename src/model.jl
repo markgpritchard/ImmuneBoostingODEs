@@ -32,15 +32,18 @@ function _sirnslambda(p::AbstractVector, u)
     return λ 
 end
 
+#@memoize function transformedsirns!(du, u, p, t)
 function transformedsirns!(du, u, p, t)
     newparms = transformparameters(p)
     sirns!(du, u, newparms, t)
 end
 
 function transformparameters(p; gamma=48.7, mu=0.0087)
-    r0, logitβ1, ϕ, logψ, logω, logitbetaprimemultiplier, logitfinalbetaprime, logitproportiondetected, betaprime = p
+    logr0, logitβ1, ϕ, logψ, logω, logitbetaprimemultiplier, logitfinalbetaprime, logitproportiondetected, betaprime = p
+    r0 = exp(logr0)
+    r0 * (gamma + mu) * betaprime >= 0 || @warn "Negative β0 with p=$p"
     return SirnsParameters(
-        r0 * (gamma + mu) * betaprime,  # β0::T
+        max(r0 * (gamma + mu) * betaprime, zero(r0 * (gamma + mu) * betaprime)),  # β0::T
         _logistic(logitβ1),  # β1::T
         ϕ,  # ϕ::T
         gamma,  # γ::Float64
@@ -55,7 +58,8 @@ function transformparameters(p; gamma=48.7, mu=0.0087)
 end
 
 function transformparameterswithoutbetaprime(p; gamma=48.7, mu=0.0087)
-    r0, logitβ1, ϕ, logψ, logω, logitbetaprimemultiplier, logitfinalbetaprime, logitproportiondetected, = p
+    logr0, logitβ1, ϕ, logψ, logω, logitbetaprimemultiplier, logitfinalbetaprime, logitproportiondetected, = p
+    r0 = exp(logr0)
     return SirnsParameters(
         r0 * (gamma + mu),  # β0::T
         _logistic(logitβ1),  # β1::T

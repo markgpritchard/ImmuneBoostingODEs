@@ -1,5 +1,5 @@
 
-_logistic(x) = exp(x) / (1 + exp(x))
+_logistic(x) = 1 / (1 + exp(-x))
 #=
 function _tranformmodelparameters(v; γ, μ, ω)
     @assert length(v) == 8 
@@ -24,24 +24,29 @@ end
 =#
 @model function fitmodel(
     incidence, prob, cbs, saveat;
-    rzero_prior=Gamma(1, 2),
-    betaone_logitprior=Normal(0, 2.0),
-    phi_prior=Uniform(-π, π),
-    psi_logprior=Normal(0, 2.0),
-    omega_logprior=Normal(0, 2.0),
-    betaprimemultiplier_logitprior=Normal(0, 2.0),
-    finalbetaprime_logitprior=Normal(0, 2.0),
-    proportiondetected_logitprior=Normal(0, 2.0),
+    #rzero_prior=Gamma(2, 1),
+    #rzero_prior=Gamma(1.5, 1),
+    rzero_logprior=Normal(0.7, 1.2),
+    betaone_logitprior=Normal(-2.3, 1.5),  # mean of 0.1
+    phi_prior=truncated(Normal(0, 1), -π, π),
+    psi_logprior=Normal(0, 2),
+    #psi_logprior=TDist(2),
+    omega_logprior=Normal(0, 0.7),
+    betaprimemultiplier_logitprior=Normal(0, 1.5),
+    finalbetaprime_logitprior=Normal(log(0.9 / 0.1), 1.0),
+    proportiondetected_logitprior=Normal(log(0.01), 1.0),
     #pparameter_tranformedlogitprior=TDist(2),
     #pparameter_tranformedlogitprior=truncated(TDist(2), -2.1, Inf),
     #pparameter_logitprior=truncated(TDist(2), -1.0, Inf),
     #pparameter_logitprior=truncated(Normal(0, 1), -1.0, Inf),
     #inverserprior=Exponential(1),
-    rparameter_prior=Exponential(1),
+    invrparameter_prior=Exponential(1),
+    S0max_logitprior=TDist(2),
+    I0_transformedlogitprior=TDist(2),
     gamma=48.7,
     mu=0.0087,
 )
-    r0 ~ rzero_prior
+    logr0 ~ rzero_logprior
     logitβ1 ~ betaone_logitprior
     ϕ ~ phi_prior
     logψ ~ psi_logprior
@@ -51,9 +56,13 @@ end
     logitproportiondetected ~ proportiondetected_logitprior
     #tranformedlogitpparameter ~ pparameter_tranformedlogitprior
     #logitpparameter ~ pparameter_logitprior
-    rparameter ~ rparameter_prior
+    invrparameter ~ invrparameter_prior
+    logitS0max ~ S0max_logitprior
+    transformedlogitI0 ~ I0_transformedlogitprior
 
-    if isnan(r0) || rparameter <= 0
+    r0 = exp(logr0)
+
+    if isnan(r0) || 1 / invrparameter <= 0
         Turing.@addlogprob! -Inf
         return nothing
     end
@@ -78,7 +87,9 @@ end
         return nothing
     end
  =#
-    u0 = sirns_u0(0.01, 2e-5; p, equalrs=true, t0=1996.737)  # 10 years before data collection
+    I0 = _logistic(transformedlogitI0 - 6)
+    S0 = min(_logistic(logitS0max), 1 - I0)
+    u0 = sirns_u0(S0, I0; p, equalrs=true, t0=1996.737)  # 10 years before data collection
 
     sol = solve(
         prob, Vern9(; lazy=false); 
@@ -96,6 +107,7 @@ end
         return nothing
     end
 
+    rparameter = 1 / invrparameter
     cumulativecases = modelcompartments(sol, 1)
     incidentcases = casespertimeblock(cumulativecases) .* 5_450_000
 

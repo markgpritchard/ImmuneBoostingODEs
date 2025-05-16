@@ -106,7 +106,7 @@ function optimmobilityaffect!(integrator)
     index = findfirst(x -> x >= integrator.t, MOBILITYCALLBACKTIMES)
     reduction = 1 - MOBILITYCALLBACKPROPORTIONS[index] 
     adjustedreduction = ImmuneBoostingODEs._logistic(integrator.p[6]) * reduction
-    integrator.p[9] = 1 - adjustedreduction
+    integrator.p[9] = max(1 - adjustedreduction, 0.0)  # never negative
 end
 
 function optimfinalmobilityaffect!(integrator)
@@ -128,6 +128,6 @@ optimcbs = let
         last(MOBILITYCALLBACKTIMES) + 1 / 365, optimfinalmobilityaffect!; 
         save_positions
     )
-    CallbackSet(mobilitycb, finalmobilitycb) 
+    CallbackSet(optimearlycallback, mobilitycb, finalmobilitycb) 
 end
 

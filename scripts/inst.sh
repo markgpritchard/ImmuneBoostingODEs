@@ -7,7 +7,7 @@
 #SBATCH --mail-user=mark.pritchard@ndm.ox.ac.uk
 
 export JULIA_NUM_THREADS=1
-module load Julia/1.9.3-linux-x86_64
+module load Julia/1.11.3-linux-x86_64
 
 julia scripts/instantiate.jl
 

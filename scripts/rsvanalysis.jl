@@ -7,20 +7,28 @@ using DataFrames
 using DifferentialEquations
 using Memoization
 using Optimization
+#using OptimizationBBO
 using OptimizationOptimJL
-using OptimizationPolyalgorithms
+#using OptimizationPolyalgorithms
 using OrdinaryDiffEq
 using Random
-using SciMLSensitivity
+#using ReverseDiff
+#using SciMLSensitivity
 using Turing
 using Zygote
 
 #include("samplepriors.jl")
 
-testrun = false 
+testrun = true 
 
-n_rounds = testrun ? 25 : 10_000
-optimizationsolvermaxiters = testrun ? 100 : 1e5
+if length(ARGS) == 32 
+    n_rounds = parse(Int, ARGS[1])
+    optimizationsolvermaxiters = parse(Int, ARGS[2])
+else
+    n_rounds = testrun ? 25 : 10_000
+    optimizationsolvermaxiters = testrun ? 25_000 : 1e6
+end
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Load the data 
@@ -33,7 +41,7 @@ include("rsvsetup.jl")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # `parms` is a vector containing the following in order:
-    # r0, 
+    # logr0, 
     # logitβ1, 
     # ϕ, 
     # logψ, 
@@ -41,16 +49,15 @@ include("rsvsetup.jl")
     # logitbetaprimemultiplier 
     # logitfinalbetaprime, 
     # logitproportiondetected, 
-    # and finally any number, which will be mutated during Optimization (not related to
-        # `rparameter` in `fitmodel`) 
+    # <any non-negative number>
+    # logitS0max
+    # logitI0, 
 function loss(
     parms; 
     data, 
     prob, 
     callback, 
     saveat,
-    S0=0.1,
-    I0=2e-5,
     equalrs=true,
     t0=1996.737,
     alg=Vern9(; lazy=false),
@@ -59,10 +66,12 @@ function loss(
     gamma=48.7,
     mu=0.0087,
 ) 
-    if parms[1] < 0 || parms[3] < -π || parms[3] > π
+    if parms[3] < -π || parms[3] > π || parms[9] < 0
         return Inf
     end
 
+    I0 = ImmuneBoostingODEs._logistic(parms[11])
+    S0 = min(ImmuneBoostingODEs._logistic(parms[10]), 1 - I0)
     u0 = sirns_u0_transformedp(S0, I0; p=parms, equalrs, t0)
     sol = solve(
         prob, alg; 
@@ -76,9 +85,20 @@ function loss(
 
     cumulativecases = modelcompartments(sol, 8)
     incidentcases = casespertimeblock(cumulativecases) .* 5_450_000
-    loss = sum(abs2, data .- incidentcases .* ImmuneBoostingODEs._logistic(parms[7]))
-    #loss = sum(abs2, data .- incidentcases .* 0.015)  # fix at 1.5% detected
-    #println("parms=$parms -> totalcases=$(last(cumulativecases)), loss=$loss")
+    loss = sum(
+        [
+            -log(
+                pdf(
+                    NegativeBinomial(
+                        0.25,
+                        0.25 / (0.25 + incidentcases[t] * ImmuneBoostingODEs._logistic(parms[8]))
+                    ),
+                    data[t]
+                )
+            )
+            for t ∈ eachindex(data)
+        ]
+    ) - abs2(ImmuneBoostingODEs._logistic(parms[7]) - parms[9])  # so that parms[9] has some influence on `loss` 
     return loss
 end
 
@@ -87,8 +107,6 @@ function optimizesirns(
     parms;
     callback,
     saveat,
-    S0=0.1,
-    I0=2e-5,
     equalrs=true,
     t0=1996.737,
     tspan=( 1996.737, last(saveat) ),
@@ -99,7 +117,15 @@ function optimizesirns(
     odesolvermaxiters=5e7,
     optimizationsolvermaxiters=1e5,
     adtype=Optimization.AutoZygote(),
+    lb=[ -1, -5.3, -2, -4, -0.7, -2, 0.24, -6.6, 0, -4.3, -10.3 ],
+    ub=[ 3, 0, 2, 3, 1.1, 0.2, 4.2, -2.6, 1, 4.3, -1.7 ],
+    nt=10,
+    rt=0.975,
+    r_expand=2.0,
+    verbosity=3,
 )
+    I0 = ImmuneBoostingODEs._logistic(parms[11])
+    S0 = min(ImmuneBoostingODEs._logistic(parms[10]), 1 - I0)
     u0 = sirns_u0_transformedp(S0, I0; p=parms, equalrs, t0)
     prob = ODEProblem(transformedsirns!, u0, tspan, parms)
     sol = solve(
@@ -118,9 +144,7 @@ function optimizesirns(
             callback, 
             data, 
             prob, 
-            saveat, 
-            S0, 
-            I0, 
+            saveat,  
             equalrs, 
             t0, 
             alg, 
@@ -129,31 +153,57 @@ function optimizesirns(
         ), 
         adtype
     )
-    optprob = Optimization.OptimizationProblem(optf, parms)
-    result_ode = Optimization.solve(optprob, PolyOpt(); maxiters=optimizationsolvermaxiters)
+    optprob = Optimization.OptimizationProblem(optf, parms; lb, ub)
+    result_ode = Optimization.solve(
+        optprob, Optim.SAMIN(; nt, rt, r_expand, verbosity); 
+        maxiters=optimizationsolvermaxiters
+    )
+
     return result_ode
 end
 
-initial_params1 = optimizesirns(
-    data.Cases, 
-    [ 2.0, log(0.1), 0.0, log(1), log(2), log(1), log(0.9 / 0.1), log(0.02), 1.0 ];
-    callback=optimcbs, saveat, optimizationsolvermaxiters,
-)
-initial_params2 = optimizesirns(
-    data.Cases, 
-    [ 1.0, log(1), -0.5, log(0.001), log(1), log(0.1), log(0.8 / 0.2), log(0.015), 1.0 ];
-    callback=optimcbs, saveat, optimizationsolvermaxiters,
-)
-initial_params3 = optimizesirns(
-    data.Cases, 
-    [ 5.0, log(0.2), 0.5, log(10), log(0.5), log(0.99/0.01), log(0.9/0.1), log(0.01), 1.0 ];
-    callback=optimcbs, saveat, optimizationsolvermaxiters,
-)
-initial_params4 = optimizesirns(
-    data.Cases, 
-    [ 10.0, log(0.001), 0.0, log(0.5), log(2), log(1), log(0.99 / 0.01), log(0.005), 1.0 ];
-    callback=optimcbs, saveat, optimizationsolvermaxiters,
-)
+
+initial_params1 = let
+    lb = [ -1.0, -2.197, -0.8, -4.0, 0.6931, -2, 2.944, -3.892, 0.0, -4.3, -10.3 ]
+    ub = [ 3.0, -2.197, 0.8, 3.0, 0.6931, 0.2, 2.944, -3.892, 1.0, 4.3, -1.7 ]
+    _add = (ub .- lb) .* 0.5
+    optimizesirns(
+        data.Cases, 
+        lb .+ _add;
+        callback=optimcbs, saveat, optimizationsolvermaxiters, lb, ub
+    )
+end
+
+initial_params2 = let
+    lb = [ -1.0, -1.386, -0.8, -4.0, 1.099, -2, 2.197, -5.293, 0.0, -4.3, -10.3 ]
+    ub = [ 3.0, -1.386, 0.8, 3.0, 1.099, 0.2, 2.197, -5.293, 1.0, 4.3, -1.7 ]
+    _add = (ub .- lb) .* 0.5
+    optimizesirns(
+        data.Cases, 
+        lb .+ _add;
+        callback=optimcbs, saveat, optimizationsolvermaxiters, lb, ub
+    )
+end
+initial_params3 = let
+    lb = [ -1.0, -2.197, -0.8, -4.0, -0.6931, -2, 2.944, -4.595, 0.0, -4.3, -10.3 ]
+    ub = [ 3.0, -2.197, 0.8, 3.0, -0.6931, 0.2, 2.944, -4.595, 1.0, 4.3, -1.7 ]
+    _add = (ub .- lb) .* 0.01
+    optimizesirns(
+        data.Cases, 
+        lb .+ _add;
+        callback=optimcbs, saveat, optimizationsolvermaxiters, lb, ub
+    )
+end
+initial_params4 = let
+    lb = [ -1.0, -2.197, -0.8, -4.0, 0.0, -2, 2.944, -4.595, 0.0, -4.3, -10.3 ]
+    ub = [ 3.0, -2.197, 0.8, 3.0, 0.0, 0.2, 2.944, -4.595, 1.0, 4.3, -1.7 ]
+    _add = (ub .- lb) .* 0.99
+    optimizesirns(
+        data.Cases, 
+        lb .+ _add;
+        callback=optimcbs, saveat, optimizationsolvermaxiters, lb, ub
+    )
+end
 
 tspan = ( 1996.737, last(saveat) )
 initialp = SirnsParameters(
@@ -173,20 +223,90 @@ u0 = sirns_u0(0.01, 2e-5; p=initialp, equalrs=true, t0=1996.737)
 prob = ODEProblem(sirns!, u0, tspan, initialp)
 
 include("rsvfitmodel.jl")
+#=
+Random.seed!(1729)
+priorschain = sample(fitmodel(data.Cases, prob, cbs, saveat), Prior(), MCMCThreads(), 250, 4)
+priorschaindf = DataFrame(priorschain)
+plotchains(priorschaindf)
 
+using CairoMakie
+
+priormodeloutputs = Vector{Vector{<:Union{Float64, Missing}}}(undef, size(priorschaindf, 1))
+
+for i ∈ axes(priorschaindf, 1)
+    r0 = exp(priorschaindf.logr0[i])
+    p = SirnsParameters(
+        r0 * (48.7 + 0.0087),  # β0::T
+        _logistic(priorschaindf.logitβ1[i]),  # β1::T
+        priorschaindf.ϕ[i],  # ϕ::T
+        48.7,  # γ::Float64
+        0.0087,  # μ::Float64 
+        exp(priorschaindf.logψ[i]),  # ψ::T
+        exp(priorschaindf.logω[i]),  # ω::T
+        r0 * (48.7 + 0.0087),  # originalβ0::T
+        _logistic(priorschaindf.logitbetaprimemultiplier[i]),  # betaprimemultiplier::T
+        _logistic(priorschaindf.logitfinalbetaprime[i]),  # finalbetaprime::T
+        _logistic(priorschaindf.logitproportiondetected[i]),  # proportiondetected::T
+    )
+    I0 = _logistic(priorschaindf.transformedlogitI0[i] - 6)
+    S0 = min(ImmuneBoostingODEs._logistic(priorschaindf.logitS0max[i]), 1 - I0)
+    u0 = sirns_u0(S0, I0; p, equalrs=true, t0=1996.737)
+    tspan = ( 1996.737, last(saveat) )
+    
+    prob = ODEProblem(sirns!, u0, tspan, p) 
+    sol = solve(
+        prob, Vern9(; lazy=false); 
+        p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=1e8,
+    )
+
+    if SciMLBase.successful_retcode(sol)
+        cumulativecases = modelcompartments(sol, 8)
+        incidentcases = casespertimeblock(cumulativecases .* 5_450_000 * p.proportiondetected)
+        priormodeloutputs[i] = incidentcases
+    else
+        @warn "$(sol.retcode) with p=$p, u0=$u0"
+        priormodeloutputs[i] = missings(353)
+    end
+end
+
+medianoutput = Vector{Float64}(undef, 353)
+lcioutput = Vector{Float64}(undef, 353)
+ucioutput = Vector{Float64}(undef, 353)
+for t ∈ 1:353 
+    #lc, me, uc = quantile(skipmissing([ priormodeloutputs[i][t] for i ∈ axes(priorschaindf, 1) ]), [ 0.025, 0.5, 0.975 ])
+    lc, me, uc = quantile(
+        skipmissing([ priormodeloutputs[i][t] for i ∈ axes(priorschaindf, 1) ]), 
+        [ 0.05, 0.5, 0.95 ]
+    )
+    medianoutput[t] = me
+    lcioutput[t] = lc 
+    ucioutput[t] = uc 
+end
+
+fig = Figure(; size=( 500, 500 ))
+ga = GridLayout(fig[1, 1])
+ax = Axis(ga[1, 1]; xticks=2017:2:2023,)# yticks=0:200:600)
+band!(ax, data.Date, lcioutput, ucioutput; color=( COLOURVECTOR[1], 0.5 ))
+lines!(ax, data.Date, medianoutput; color=COLOURVECTOR[1], linewidth=1,)
+scatter!(ax, data.Date, data.Cases; color=:black, markersize=3)
+
+
+fig
+
+=#
+adjustedparams(p) = [ p[1:8]; 4.0; p[10]; p[11] .+ 6 ]
+ 
 chain = sample(
     fitmodel(data.Cases, prob, cbs, saveat),
     Turing.NUTS(0.65),
     MCMCThreads(),
     n_rounds,
     4;
-    #16;
-    #initial_params=optimvalues,
     initial_params=[
-        [ initial_params1[1:8]; 1.0 ],
-        [ initial_params2[1:8]; 1.0 ],
-        [ initial_params3[1:8]; 1.0 ],
-        [ initial_params4[1:8]; 1.0 ],
+        adjustedparams(initial_params1),
+        adjustedparams(initial_params2),
+        adjustedparams(initial_params3),
+        adjustedparams(initial_params4),
     ]
 )
 
@@ -204,26 +324,27 @@ chaindict = Dict(
 )
 
 safesave(datadir("sims", "chaindict_nrounds_$(n_rounds).jld2"), chaindict)
-
-
-##########
 #=
 modeloutputs = Vector{Vector{Float64}}(undef, size(chaindf, 1))
 
 for i ∈ axes(chaindf, 1)
+    r0 = exp(chaindf.logr0[i])
     p = SirnsParameters(
-        chaindf.r0[i] / (48.7 + 0.0087),  # β0::T
+        r0 * (48.7 + 0.0087),  # β0::T
         _logistic(chaindf.logitβ1[i]),  # β1::T
         chaindf.ϕ[i],  # ϕ::T
         48.7,  # γ::Float64
         0.0087,  # μ::Float64 
         exp(chaindf.logψ[i]),  # ψ::T
         exp(chaindf.logω[i]),  # ω::T
-        chaindf.r0[i] / (48.7 + 0.0087),  # originalβ0::T
+        r0 * (48.7 + 0.0087),  # originalβ0::T
+        _logistic(chaindf.logitbetaprimemultiplier[i]),  # betaprimemultiplier::T
         _logistic(chaindf.logitfinalbetaprime[i]),  # finalbetaprime::T
         _logistic(chaindf.logitproportiondetected[i]),  # proportiondetected::T
     )
-    u0 = sirns_u0(0.1, 2e-5; p, t0=1996.737)
+    I0 = _logistic(chaindf.transformedlogitI0[i] - 6)
+    S0 = min(ImmuneBoostingODEs._logistic(chaindf.logitS0max[i]), 1 - I0)
+    u0 = sirns_u0(S0, I0; p, equalrs=true, t0=1996.737)
     tspan = ( 1996.737, last(saveat) )
     
     prob = ODEProblem(sirns!, u0, tspan, p) 
@@ -231,218 +352,37 @@ for i ∈ axes(chaindf, 1)
         prob, Vern9(; lazy=false); 
         p, u0, callback=cbs, saveat, abstol=1e-15, maxiters=1e8,
     )
-    cumulativecases = modelcompartments(sol, 8)
-    incidentcases = casespertimeblock(cumulativecases .* 5_450_000 * p.proportiondetected)
-    modeloutputs[i] = incidentcases
+
+    if SciMLBase.successful_retcode(sol)
+        cumulativecases = modelcompartments(sol, 8)
+        incidentcases = casespertimeblock(cumulativecases .* 5_450_000 .* p.proportiondetected)
+        modeloutputs[i] = incidentcases
+    else
+        @warn "$(sol.retcode) with p=$p, u0=$u0"
+        modeloutputs[i] = missings(353)
+    end
 end
 
 medianoutput = Vector{Float64}(undef, 353)
 lcioutput = Vector{Float64}(undef, 353)
 ucioutput = Vector{Float64}(undef, 353)
 for t ∈ 1:353 
-    lc, me, uc = quantile([ modeloutputs[i][t] for i ∈ axes(chaindf, 1) ], [ 0.025, 0.5, 0.975 ])
+    lc, me, uc = quantile(
+        skipmissing([ modeloutputs[i][t] for i ∈ axes(chaindf, 1) ]), 
+        [ 0.025, 0.5, 0.975 ]
+    )
     medianoutput[t] = me
     lcioutput[t] = lc 
     ucioutput[t] = uc 
 end
 
-
 fig = Figure(; size=( 500, 500 ))
-
 ga = GridLayout(fig[1, 1])
-ax = Axis(ga[1, 1]; xticks=2017:2:2023, yticks=0:200:600)
+ax = Axis(ga[1, 1]; xticks=2017:2:2023,)# yticks=0:200:600)
 lines!(ax, data.Date, medianoutput; color=COLOURVECTOR[1], linewidth=1,)
 band!(ax, data.Date, lcioutput, ucioutput; color=( COLOURVECTOR[1], 0.5 ))
 scatter!(ax, data.Date, data.Cases; color=:black, markersize=3)
 
-
-fig
-
-
-
-
-
-
-
-
-for (i, v) ∈ enumerate(plotvvector)
-    plotfittedsimulationquantiles!(axs[i], data, v, saveat)
-    text!(
-        axs[i], textlocation[1], textlocation[2]; 
-        text="ω=$(omegalabels[i])", fontsize=11.84, align=( :left, :top )
-    )
-end
-
-stringencyax = Axis(ga[1:7, 1])
-vspan!(stringencyax, reduceday, increaseday, color=( :gray, 0.1 ))
-for x ∈ 2017:1:2023
-    vlines!(
-        stringencyax, x; 
-        color=RGBAf(0, 0, 0, 0.12), linestyle=( :dot, :dense ), linewidth=1,
-    )
-end
-
-gb = GridLayout(fig[1, 2])
-ax2 = Axis(
-    gb[1, 1]; 
-    xticks=( logomegavalues, omegalabels ), 
-    yticks=( log.([ 1, 2, 5, 10, 20, 40 ]), [ "1", "2", "5", "10", "20", "40" ])
-)
-scatter!(
-    ax2, 
-    logomegavalues, 
-    log.([ quantile(v.β0, 0.5) for v ∈ pv ] ./ (γ + μ)); 
-    color=:blue, markersize=5,
-)
-rangebars!(
-    ax2, 
-    logomegavalues, 
-    log.([ quantile(v.β0, 0.05) for v ∈ pv ] ./ (γ + μ)), 
-    log.([ quantile(v.β0, 0.95) for v ∈ pv ] ./ (γ + μ));
-    color=:blue,
-)
-for y ∈ [ 1, 2, 5, 10, 20, 40 ]
-    hlines!(
-        ax2, log(y); 
-        color=RGBAf(0, 0, 0, 0.12), linestyle=( :dot, :dense ), linewidth=1,
-    )
-end
-ax3 = Axis(gb[2, 1]; xticks=( logomegavalues, omegalabels ), yticks=0:5:20,)
-scatter!(
-    ax3, 
-    logomegavalues, 
-    #[ quantile(v.β1, 0.5) for v ∈ pv ] .* [ quantile(v.β0, 0.5) for v ∈ pv ] ./ (γ + μ); 
-    100 .* [ quantile(v.β1, 0.5) for v ∈ pv ]; 
-    color=:blue, markersize=5,
-)
-for y ∈ 0:5:20
-    hlines!(
-        ax3, y; 
-        color=RGBAf(0, 0, 0, 0.12), linestyle=( :dot, :dense ), linewidth=1,
-    )
-end    
-rangebars!(
-    ax3, 
-    logomegavalues, 
-    #[ quantile(v.β1, 0.05) for v ∈ pv ] .* [ quantile(v.β0, 0.05) for v ∈ pv ] ./ (γ + μ), 
-    #[ quantile(v.β1, 0.95) for v ∈ pv ] .* [ quantile(v.β0, 0.95) for v ∈ pv ] ./ (γ + μ);
-    100 .* [ quantile(v.β1, 0.05) for v ∈ pv ], 
-    100 .* [ quantile(v.β1, 0.95) for v ∈ pv ];
-    color=:blue,
-)
-ax4 = Axis(
-    gb[3, 1]; 
-    xticks=( logomegavalues, omegalabels ), 
-    yticks=( 
-        log.([ 0.001, 0.1, 10, 1000 ]), 
-        [ "0.001", "0.1", "10", "1000" ]
-    )
-)
-scatter!(
-    ax4, logomegavalues, log.([ quantile(v.ψ, 0.5) for v ∈ pv ]); 
-    color=:blue, markersize=5,
-)
-rangebars!(
-    ax4, 
-    logomegavalues, 
-    log.([ quantile(v.ψ, 0.05) for v ∈ pv ]), 
-    log.([ quantile(v.ψ, 0.95) for v ∈ pv ]);
-    color=:blue,
-)
-for y ∈ [ 0.001, 0.1, 10, 1000 ]
-    hlines!(
-        ax4, log(y); 
-        color=RGBAf(0, 0, 0, 0.12), linestyle=( :dot, :dense ), linewidth=1,
-    )
-end   
-ax5 = Axis(gb[4, 1]; xticks=( logomegavalues, omegalabels ), yticks=20:10:50)
-scatter!(
-    ax5, logomegavalues, 100 .* (1 .- [ quantile(v.βreduction1, 0.5) for v ∈ pv ]); 
-    color=:blue, markersize=5,
-)
-rangebars!(
-    ax5, 
-    logomegavalues, 
-    100 .* (1 .- [ quantile(v.βreduction1, 0.05) for v ∈ pv ]), 
-    100 .* (1 .- [ quantile(v.βreduction1, 0.95) for v ∈ pv ]);
-    color=:blue,
-)
-for y ∈ 20:10:50
-    hlines!(
-        ax5, y; 
-        color=RGBAf(0, 0, 0, 0.12), linestyle=( :dot, :dense ), linewidth=1,
-    )
-end   
-ax6 = Axis(gb[5, 1]; xticks=( logomegavalues, omegalabels ), yticks=0.0:0.5:2.0)
-scatter!(
-    ax6, logomegavalues, [ quantile(v.detection, 0.5) for v ∈ pv ] .* 100; 
-    color=:blue, markersize=5,
-)
-rangebars!(
-    ax6, 
-    logomegavalues, 
-    [ quantile(v.detection, 0.05) for v ∈ pv ] .* 100, 
-    [ quantile(v.detection, 0.95) for v ∈ pv ] .* 100;
-    color=:blue,
-)
-for y ∈ 0.0:0.5:2.0
-    hlines!(
-        ax6, y; 
-        color=RGBAf(0, 0, 0, 0.12), linestyle=( :dot, :dense ), linewidth=1,
-    )
-end   
-
-linkxaxes!(stringencyax, axs...)
-for i ∈ 1:7 
-    formataxis!(
-        axs[i]; 
-        hidex=(i != 7), hidexticks=(i != 7), trimspines=true, hidespines=( :t, :r ),
-        setpoint=textlocation,
-    )
-    if i != 7 hidespines!(axs[i], :b) end
-end
-formataxis!(
-    stringencyax; 
-    hidespines=( :l, :r, :t, :b ), 
-    hidex=true, hidexticks=true, hidey=true, hideyticks=true
-)
-Label(
-    ga[1:7, 0], "Weekly incidence"; 
-    fontsize=11.84, rotation=π/2, tellheight=false
-)
-Label(ga[8, 1], "Year"; fontsize=11.84, tellwidth=false)
-colgap!(ga, 1, 5)
-for r ∈ [ 1, 9 ] rowgap!(ga, 7, 5) end
-for (i, ax) ∈ enumerate([ ax2, ax3, ax4, ax5, ax6 ])
-    formataxis!(
-        ax; 
-        hidex=(i != 5), hidexticks=(i != 5), trimspines=true, hidespines=( :t, :r ),
-    )
-    if i != 5 hidespines!(ax, :b) end
-    if i != 4 setvalue!(ax, 1, 0) end
-end
-Label(gb[1, 0], L"Mean $\mathcal{R}_0$"; fontsize=11.84, rotation=π/2, tellheight=false)
-Label(
-    gb[2, 0], "Magnitude of\n forcing, %"; 
-    fontsize=11.84, rotation=π/2, tellheight=false
-)
-Label(
-    gb[3, 0], L"$\psi$"; 
-    fontsize=11.84, rotation=π/2, tellheight=false
-)
-Label(
-    gb[4, 0], "Effect of\ninterventions, %"; 
-    fontsize=11.84, rotation=π/2, tellheight=false
-)
-Label(
-    gb[5, 0], "Proportion\ndiagnosed, %"; 
-    fontsize=11.84, rotation=π/2, tellheight=false
-)
-Label(gb[6, 1], "Waning rate, ω"; fontsize=11.84, tellwidth=false)
-colgap!(gb, 1, 5)
-rowgap!(gb, 5, 5)
-
-labelplots!([ "A", "B", ], [ ga, gb ]; rows=[ 1, 1 ])
 
 fig
 =#

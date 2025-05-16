@@ -1,8 +1,8 @@
 #! /bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=12
-#SBATCH --time=00:10:00
-#SBATCH --partition=devel
+#SBATCH --time=24:00:00
+#SBATCH --partition=medium
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=mark.pritchard@ndm.ox.ac.uk
 
