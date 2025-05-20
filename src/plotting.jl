@@ -561,7 +561,8 @@ function plotchains(data::DataFrame; size=( 400, 800 ), kwargs...)
     for (j, chainid) ∈ enumerate(unique(data.chain))
         inds = findall(x -> x == chainid, data.chain)
         for (i, k) ∈ enumerate(plotnames_ind) 
-            lines!(ax[i], getproperty(data, colnames[k])[inds]; color=COLOURVECTOR[j])
+            color = j == 8 ? :gray : COLOURVECTOR[j]
+            lines!(ax[i], getproperty(data, colnames[k])[inds]; color)
             Label(fig.layout[i, 0], "$(colnames[k])"; rotation=π/2, tellheight=false)
         end
     end

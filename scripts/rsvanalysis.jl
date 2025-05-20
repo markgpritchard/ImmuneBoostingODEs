@@ -21,13 +21,15 @@ using Zygote
 
 testrun = true 
 
-if length(ARGS) == 32 
+if length(ARGS) == 2 
     n_rounds = parse(Int, ARGS[1])
     optimizationsolvermaxiters = parse(Int, ARGS[2])
 else
     n_rounds = testrun ? 25 : 10_000
     optimizationsolvermaxiters = testrun ? 25_000 : 1e6
 end
+
+println("Starting with n_rounds=$n_rounds, optimizationsolvermaxiters=$optimizationsolvermaxiters")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -40,20 +42,19 @@ include("rsvsetup.jl")
 # Fitting parameters 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# `parms` is a vector containing the following in order:
-    # logr0, 
-    # logitβ1, 
-    # ϕ, 
-    # logψ, 
-    # logω, 
-    # logitbetaprimemultiplier 
-    # logitfinalbetaprime, 
-    # logitproportiondetected, 
-    # <any non-negative number>
-    # logitS0max
-    # logitI0, 
 function loss(
-    parms; 
+    parms;  # a vector containing the following in order:
+        # logr0, 
+        # logitβ1, 
+        # ϕ, 
+        # logψ, 
+        # logω, 
+        # logitbetaprimemultiplier 
+        # logitfinalbetaprime, 
+        # logitproportiondetected, 
+        # <any non-negative number>
+        # logitS0max
+        # logitI0, 
     data, 
     prob, 
     callback, 
@@ -73,10 +74,7 @@ function loss(
     I0 = ImmuneBoostingODEs._logistic(parms[11])
     S0 = min(ImmuneBoostingODEs._logistic(parms[10]), 1 - I0)
     u0 = sirns_u0_transformedp(S0, I0; p=parms, equalrs, t0)
-    sol = solve(
-        prob, alg; 
-        p=parms, u0, callback, saveat, abstol, maxiters,
-    )
+    sol = solve(prob, alg; p=parms, u0, callback, saveat, abstol, maxiters,)
 
     if !SciMLBase.successful_retcode(sol)
         @warn "$(sol.retcode) with parms=$parms, u0=$u0"
@@ -162,47 +160,41 @@ function optimizesirns(
     return result_ode
 end
 
+adjustedparams(p) = [ p[1:8]; 4.0; p[10]; p[11] .+ 6 ]
 
-initial_params1 = let
-    lb = [ -1.0, -2.197, -0.8, -4.0, 0.6931, -2, 2.944, -3.892, 0.0, -4.3, -10.3 ]
-    ub = [ 3.0, -2.197, 0.8, 3.0, 0.6931, 0.2, 2.944, -3.892, 1.0, 4.3, -1.7 ]
-    _add = (ub .- lb) .* 0.5
-    optimizesirns(
-        data.Cases, 
-        lb .+ _add;
-        callback=optimcbs, saveat, optimizationsolvermaxiters, lb, ub
-    )
-end
+initial_params = Vector{Vector{Float64}}(undef, 8)
 
-initial_params2 = let
-    lb = [ -1.0, -1.386, -0.8, -4.0, 1.099, -2, 2.197, -5.293, 0.0, -4.3, -10.3 ]
-    ub = [ 3.0, -1.386, 0.8, 3.0, 1.099, 0.2, 2.197, -5.293, 1.0, 4.3, -1.7 ]
+Threads.@threads for i ∈ 1:8 
+    Random.seed!(n_rounds + optimizationsolvermaxiters + i)
+
+    lb = [ -1.0, -Inf, -0.8, -4.0, -Inf, -2.0, -Inf, -3.892, 0.0, -4.3, -10.3 ]
+    ub = [ 3.0, Inf, 0.8, 3.0, Inf, 0.2, Inf, -3.892, 1.0, 4.3, -1.7 ]
+    
+    if isodd(i)
+        lb[2] = ub[2] = log(0.01 / 0.99)
+    else
+        lb[2] = ub[2] = log(0.25 / 0.75)
+    end
+
+    if i ∈ [ 1, 2, 5, 6 ]
+        lb[5] = ub[5] = log(2)
+    else
+        lb[5] = ub[5] = log(0.5)
+    end
+
+    if i <= 4
+        lb[7] = ub[7] = log(0.75 / 0.25)
+    else
+        lb[7] = ub[7] = log(0.95 / 0.05)
+    end
+
     _add = (ub .- lb) .* 0.5
-    optimizesirns(
-        data.Cases, 
-        lb .+ _add;
-        callback=optimcbs, saveat, optimizationsolvermaxiters, lb, ub
+    ip = optimizesirns(
+        data.Cases, lb .+ _add;
+        callback=optimcbs, saveat, optimizationsolvermaxiters, lb, ub, verbosity=0
     )
-end
-initial_params3 = let
-    lb = [ -1.0, -2.197, -0.8, -4.0, -0.6931, -2, 2.944, -4.595, 0.0, -4.3, -10.3 ]
-    ub = [ 3.0, -2.197, 0.8, 3.0, -0.6931, 0.2, 2.944, -4.595, 1.0, 4.3, -1.7 ]
-    _add = (ub .- lb) .* 0.01
-    optimizesirns(
-        data.Cases, 
-        lb .+ _add;
-        callback=optimcbs, saveat, optimizationsolvermaxiters, lb, ub
-    )
-end
-initial_params4 = let
-    lb = [ -1.0, -2.197, -0.8, -4.0, 0.0, -2, 2.944, -4.595, 0.0, -4.3, -10.3 ]
-    ub = [ 3.0, -2.197, 0.8, 3.0, 0.0, 0.2, 2.944, -4.595, 1.0, 4.3, -1.7 ]
-    _add = (ub .- lb) .* 0.99
-    optimizesirns(
-        data.Cases, 
-        lb .+ _add;
-        callback=optimcbs, saveat, optimizationsolvermaxiters, lb, ub
-    )
+    initial_params[i] = adjustedparams(ip.minimizer)
+    @info "initial_params[$i] $(ip.retcode)"
 end
 
 tspan = ( 1996.737, last(saveat) )
@@ -294,31 +286,23 @@ scatter!(ax, data.Date, data.Cases; color=:black, markersize=3)
 fig
 
 =#
-adjustedparams(p) = [ p[1:8]; 4.0; p[10]; p[11] .+ 6 ]
+
  
 chain = sample(
     fitmodel(data.Cases, prob, cbs, saveat),
     Turing.NUTS(0.65),
     MCMCThreads(),
     n_rounds,
-    4;
-    initial_params=[
-        adjustedparams(initial_params1),
-        adjustedparams(initial_params2),
-        adjustedparams(initial_params3),
-        adjustedparams(initial_params4),
-    ]
+    8;
+    initial_params
 )
-
+#=
 chaindf = DataFrame(chain)
 plotchains(chaindf)
-
+=#
 chaindict = Dict(
     "chain" => chain,
-    "initial_params1" => initial_params1,
-    "initial_params2" => initial_params2,
-    "initial_params3" => initial_params3,
-    "initial_params4" => initial_params4,
+    "initial_params" => initial_params,
     "n_rounds" => n_rounds,
     "optimizationsolvermaxiters" => optimizationsolvermaxiters,
 )
@@ -386,3 +370,13 @@ scatter!(ax, data.Date, data.Cases; color=:black, markersize=3)
 
 fig
 =#
+
+println("Completed with n_rounds=$n_rounds, optimizationsolvermaxiters=$optimizationsolvermaxiters")
+
+
+
+
+
+
+chaindict2 = load(datadir("sims", "chaindict_nrounds_25.jld2"))
+chaindf = DataFrame(chaindict2["chain"])
