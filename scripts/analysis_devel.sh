@@ -1,6 +1,6 @@
 #! /bin/bash
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=24
+#SBATCH --ntasks-per-node=36
 #SBATCH --time=00:10:00
 #SBATCH --partition=devel
 #SBATCH --mail-type=ALL
@@ -9,9 +9,10 @@
 export JULIA_NUM_THREADS=8
 module load Julia/1.11.3-linux-x86_64
 
-julia scripts/rsvanalysis.jl "25" "2500" & 
-julia scripts/rsvanalysis.jl "1000" "1000000" & 
-julia scripts/rsvanalysis.jl "2500" "1000000" & 
+julia scripts/rsvanalysis.jl "2.0" & 
+julia scripts/rsvanalysis.jl "1.0" & 
+julia scripts/rsvanalysis.jl "0.5" &
+julia scripts/rsvanalysis.jl "0.2" & 
 
 wait
 

@@ -21,15 +21,17 @@ using Zygote
 
 testrun = true 
 
-if length(ARGS) == 2 
-    n_rounds = parse(Int, ARGS[1])
-    optimizationsolvermaxiters = parse(Int, ARGS[2])
+if length(ARGS) == 1
+    const omega = parse(Float64, ARGS[1])
+    n_rounds = 1000
+    optimizationsolvermaxiters = 1_000_000
 else
+    const omega = 0.5
     n_rounds = testrun ? 25 : 10_000
     optimizationsolvermaxiters = testrun ? 25_000 : 1e6
 end
 
-println("Starting with n_rounds=$n_rounds, optimizationsolvermaxiters=$optimizationsolvermaxiters")
+println("Starting with omega=$omega, n_rounds=$n_rounds, optimizationsolvermaxiters=$optimizationsolvermaxiters")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,13 +44,17 @@ include("rsvsetup.jl")
 # Fitting parameters 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+function transformedsirns_fixedomega!(du, u, p, t)
+    newparms = transformparameters(p; omega)
+    sirns!(du, u, newparms, t)
+end
+
 function loss(
     parms;  # a vector containing the following in order:
         # logr0, 
         # logitβ1, 
         # ϕ, 
         # logψ, 
-        # logω, 
         # logitbetaprimemultiplier 
         # logitfinalbetaprime, 
         # logitproportiondetected, 
@@ -66,14 +72,15 @@ function loss(
     maxiters=1e8,
     gamma=48.7,
     mu=0.0087,
+    omega,
 ) 
-    if parms[3] < -π || parms[3] > π || parms[9] < 0
+    if parms[3] < -π || parms[3] > π || parms[8] < 0
         return Inf
     end
 
-    I0 = ImmuneBoostingODEs._logistic(parms[11])
-    S0 = min(ImmuneBoostingODEs._logistic(parms[10]), 1 - I0)
-    u0 = sirns_u0_transformedp(S0, I0; p=parms, equalrs, t0)
+    I0 = ImmuneBoostingODEs._logistic(parms[10])
+    S0 = min(ImmuneBoostingODEs._logistic(parms[9]), 1 - I0)
+    u0 = sirns_u0_transformedp(S0, I0; p=parms, omega, equalrs, t0)
     sol = solve(prob, alg; p=parms, u0, callback, saveat, abstol, maxiters,)
 
     if !SciMLBase.successful_retcode(sol)
@@ -89,14 +96,14 @@ function loss(
                 pdf(
                     NegativeBinomial(
                         0.25,
-                        0.25 / (0.25 + incidentcases[t] * ImmuneBoostingODEs._logistic(parms[8]))
+                        0.25 / (0.25 + incidentcases[t] * ImmuneBoostingODEs._logistic(parms[7]))
                     ),
                     data[t]
                 )
             )
             for t ∈ eachindex(data)
         ]
-    ) - abs2(ImmuneBoostingODEs._logistic(parms[7]) - parms[9])  # so that parms[9] has some influence on `loss` 
+    ) - abs2(ImmuneBoostingODEs._logistic(parms[6]) - parms[8])  # so that parms[8] has some influence on `loss` 
     return loss
 end
 
@@ -115,17 +122,18 @@ function optimizesirns(
     odesolvermaxiters=5e7,
     optimizationsolvermaxiters=1e5,
     adtype=Optimization.AutoZygote(),
-    lb=[ -1, -5.3, -2, -4, -0.7, -2, 0.24, -6.6, 0, -4.3, -10.3 ],
-    ub=[ 3, 0, 2, 3, 1.1, 0.2, 4.2, -2.6, 1, 4.3, -1.7 ],
+    lb=[ -1, -5.3, -2, -0.7, -2, 0.24, -6.6, 0, -4.3, -10.3 ],
+    ub=[ 3, 0, 2, 1.1, 0.2, 4.2, -2.6, 1, 4.3, -1.7 ],
     nt=10,
     rt=0.975,
     r_expand=2.0,
     verbosity=3,
+    omega,
 )
-    I0 = ImmuneBoostingODEs._logistic(parms[11])
-    S0 = min(ImmuneBoostingODEs._logistic(parms[10]), 1 - I0)
-    u0 = sirns_u0_transformedp(S0, I0; p=parms, equalrs, t0)
-    prob = ODEProblem(transformedsirns!, u0, tspan, parms)
+    I0 = ImmuneBoostingODEs._logistic(parms[10])
+    S0 = min(ImmuneBoostingODEs._logistic(parms[9]), 1 - I0)
+    u0 = sirns_u0_transformedp(S0, I0; p=parms, omega, equalrs, t0)
+    prob = ODEProblem(transformedsirns_fixedomega!, u0, tspan, parms)
     sol = solve(
         prob, alg; 
         p=parms, u0, callback, saveat, abstol=odesolverabstol, maxiters=odesolvermaxiters,
@@ -148,6 +156,7 @@ function optimizesirns(
             alg, 
             abstol=odesolverabstol, 
             maxiters=odesolvermaxiters,
+            omega,
         ), 
         adtype
     )
@@ -160,15 +169,15 @@ function optimizesirns(
     return result_ode
 end
 
-adjustedparams(p) = [ p[1:8]; 4.0; p[10]; p[11] .+ 6 ]
+adjustedparams(p) = [ p[1:7]; 4.0; p[9]; p[10] .+ 6 ]
 
 initial_params = Vector{Vector{Float64}}(undef, 8)
 
 Threads.@threads for i ∈ 1:8 
-    Random.seed!(n_rounds + optimizationsolvermaxiters + i)
+    Random.seed!(n_rounds + optimizationsolvermaxiters + round(Int, omega) + i)
 
-    lb = [ -1.0, -Inf, -0.8, -4.0, -Inf, -2.0, -Inf, -3.892, 0.0, -4.3, -10.3 ]
-    ub = [ 3.0, Inf, 0.8, 3.0, Inf, 0.2, Inf, -3.892, 1.0, 4.3, -1.7 ]
+    lb = [ -1.0, -Inf, -0.8, -4.0, -Inf, -Inf, -3.892, 0.0, -4.3, -10.3 ]
+    ub = [ 3.0, Inf, 0.8, 3.0, Inf, Inf, -3.892, 1.0, 4.3, -1.7 ]
     
     if isodd(i)
         lb[2] = ub[2] = log(0.01 / 0.99)
@@ -177,21 +186,21 @@ Threads.@threads for i ∈ 1:8
     end
 
     if i ∈ [ 1, 2, 5, 6 ]
-        lb[5] = ub[5] = log(2)
+        lb[5] = ub[5] = log(0.1 / 0.9)
     else
-        lb[5] = ub[5] = log(0.5)
+        lb[5] = ub[5] = log(0.9 / 0.1)
     end
 
     if i <= 4
-        lb[7] = ub[7] = log(0.75 / 0.25)
+        lb[6] = ub[6] = log(0.75 / 0.25)
     else
-        lb[7] = ub[7] = log(0.95 / 0.05)
+        lb[6] = ub[6] = log(0.95 / 0.05)
     end
 
     _add = (ub .- lb) .* 0.5
     ip = optimizesirns(
         data.Cases, lb .+ _add;
-        callback=optimcbs, saveat, optimizationsolvermaxiters, lb, ub, verbosity=0
+        callback=optimcbs, saveat, optimizationsolvermaxiters, lb, ub, verbosity=0, omega
     )
     initial_params[i] = adjustedparams(ip.minimizer)
     @info "initial_params[$i] $(ip.retcode)"
@@ -205,7 +214,7 @@ initialp = SirnsParameters(
     48.7,  # γ::Float64
     0.0087,  # μ::Float64 
     1.0,  # ψ::T
-    1.0,  # ω::T
+    omega,  # ω::S
     2.0 * (48.7 + 0.0087),  # originalβ0::T
     0.5,  # betaprimemultiplier::T
     0.5,  # finalbetaprime::T
@@ -287,14 +296,15 @@ fig
 
 =#
 
- 
+Random.seed!(n_rounds + optimizationsolvermaxiters + round(Int, omega))
+
 chain = sample(
-    fitmodel(data.Cases, prob, cbs, saveat),
+    fitmodel(data.Cases, prob, cbs, saveat; omega),
     Turing.NUTS(0.65),
     MCMCThreads(),
     n_rounds,
     8;
-    initial_params
+    initial_params,
 )
 #=
 chaindf = DataFrame(chain)
@@ -307,7 +317,7 @@ chaindict = Dict(
     "optimizationsolvermaxiters" => optimizationsolvermaxiters,
 )
 
-safesave(datadir("sims", "chaindict_nrounds_$(n_rounds).jld2"), chaindict)
+safesave(datadir("sims", "chaindict_nrounds_$(n_rounds)_omega_$omega.jld2"), chaindict)
 #=
 modeloutputs = Vector{Vector{Float64}}(undef, size(chaindf, 1))
 
@@ -371,12 +381,25 @@ scatter!(ax, data.Date, data.Cases; color=:black, markersize=3)
 fig
 =#
 
-println("Completed with n_rounds=$n_rounds, optimizationsolvermaxiters=$optimizationsolvermaxiters")
+println("Completed with omega=$omega, n_rounds=$n_rounds, optimizationsolvermaxiters=$optimizationsolvermaxiters")
 
 
 
 
 
 
-chaindict2 = load(datadir("sims", "chaindict_nrounds_25.jld2"))
-chaindf = DataFrame(chaindict2["chain"])
+chaindict02 = load(datadir("sims", "chaindict_nrounds_1000_omega_0.2.jld2"))
+chaindf02 = DataFrame(chaindict02["chain"])
+plotchains(chaindf02)
+
+chaindict05 = load(datadir("sims", "chaindict_nrounds_1000_omega_0.5.jld2"))
+chaindf05 = DataFrame(chaindict05["chain"])
+plotchains(chaindf05)
+
+chaindict1 = load(datadir("sims", "chaindict_nrounds_1000_omega_1.0.jld2"))
+chaindf1 = DataFrame(chaindict1["chain"])
+plotchains(chaindf1)
+
+chaindict2 = load(datadir("sims", "chaindict_nrounds_1000_omega_2.0.jld2"))
+chaindf2 = DataFrame(chaindict2["chain"])
+plotchains(chaindf2)

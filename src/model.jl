@@ -38,8 +38,8 @@ function transformedsirns!(du, u, p, t)
     sirns!(du, u, newparms, t)
 end
 
-function transformparameters(p; gamma=48.7, mu=0.0087)
-    logr0, logitβ1, ϕ, logψ, logω, logitbetaprimemultiplier, logitfinalbetaprime, logitproportiondetected, betaprime = p
+function transformparameters(p; omega, gamma=48.7, mu=0.0087)
+    logr0, logitβ1, ϕ, logψ, logitbetaprimemultiplier, logitfinalbetaprime, logitproportiondetected, betaprime = p
     r0 = exp(logr0)
     r0 * (gamma + mu) * betaprime >= 0 || @warn "Negative β0 with p=$p"
     return SirnsParameters(
@@ -49,7 +49,7 @@ function transformparameters(p; gamma=48.7, mu=0.0087)
         gamma,  # γ::Float64
         mu,  # μ::Float64 
         exp(logψ),  # ψ::T
-        exp(logω),  # ω::T
+        omega,  # ω::T
         r0 * (gamma + mu),  # originalβ0::T
         _logistic(logitbetaprimemultiplier),  # betaprimemultiplier::T
         _logistic(logitfinalbetaprime),  # finalbetaprime::T
@@ -57,8 +57,8 @@ function transformparameters(p; gamma=48.7, mu=0.0087)
     ) 
 end
 
-function transformparameterswithoutbetaprime(p; gamma=48.7, mu=0.0087)
-    logr0, logitβ1, ϕ, logψ, logω, logitbetaprimemultiplier, logitfinalbetaprime, logitproportiondetected, = p
+function transformparameterswithoutbetaprime(p; omega, gamma=48.7, mu=0.0087)
+    logr0, logitβ1, ϕ, logψ, logitbetaprimemultiplier, logitfinalbetaprime, logitproportiondetected, = p
     r0 = exp(logr0)
     return SirnsParameters(
         r0 * (gamma + mu),  # β0::T
@@ -67,7 +67,7 @@ function transformparameterswithoutbetaprime(p; gamma=48.7, mu=0.0087)
         gamma,  # γ::Float64
         mu,  # μ::Float64 
         exp(logψ),  # ψ::T
-        exp(logω),  # ω::T
+        omega,  # ω::T
         r0 * (gamma + mu),  # originalβ0::T
         _logistic(logitbetaprimemultiplier),  # betaprimemultiplier::T
         _logistic(logitfinalbetaprime),  # finalbetaprime::T
@@ -155,8 +155,8 @@ function __sirns_u0(S0::S, I0, R1, R2, R3, phi::Number, t0) where S
     return u0
 end 
 
-function sirns_u0_transformedp(args...; p, kwargs...)
-    newparms = transformparameterswithoutbetaprime(p)
+function sirns_u0_transformedp(args...; p, omega, kwargs...)
+    newparms = transformparameterswithoutbetaprime(p; omega)
     return sirns_u0(args...; p=newparms, kwargs...)
 end
 

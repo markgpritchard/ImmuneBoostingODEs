@@ -31,7 +31,6 @@ end
     phi_prior=truncated(Normal(0, 1), -π, π),
     psi_logprior=Normal(0, 2),
     #psi_logprior=TDist(2),
-    omega_logprior=Normal(0, 0.7),
     betaprimemultiplier_logitprior=Normal(0, 1.5),
     finalbetaprime_logitprior=Normal(log(0.9 / 0.1), 1.0),
     proportiondetected_logitprior=Normal(log(0.01), 1.0),
@@ -45,12 +44,12 @@ end
     I0_transformedlogitprior=TDist(2),
     gamma=48.7,
     mu=0.0087,
+    omega,
 )
     logr0 ~ rzero_logprior
     logitβ1 ~ betaone_logitprior
     ϕ ~ phi_prior
     logψ ~ psi_logprior
-    logω ~ omega_logprior
     logitbetaprimemultiplier ~ betaprimemultiplier_logitprior
     logitfinalbetaprime ~ finalbetaprime_logitprior
     logitproportiondetected ~ proportiondetected_logitprior
@@ -74,7 +73,7 @@ end
         gamma,  # γ::Float64
         mu,  # μ::Float64 
         exp(logψ),  # ψ::T
-        exp(logω),  # ω::T
+        omega,  # ω::S
         r0 * (gamma + mu),  # originalβ0::T
         _logistic(logitbetaprimemultiplier),  # betaprimemultiplier::T
         _logistic(logitfinalbetaprime),  # finalbetaprime::T

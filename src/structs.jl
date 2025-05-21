@@ -1,14 +1,14 @@
 
 abstract type AbstractParameters end
 
-@auto_hash_equals struct SirnsParameters{T} <: AbstractParameters where T
+@auto_hash_equals struct SirnsParameters{S, T} <: AbstractParameters where {S, T}
     β0::T
     β1::T
     ϕ::T
     γ::Float64
     μ::Float64 
     ψ::T
-    ω::T
+    ω::S
     originalβ0::T
     betaprimemultiplier::T
     finalbetaprime::T
@@ -21,12 +21,12 @@ abstract type AbstractParameters end
         γ, 
         μ, 
         ψ::T, 
-        ω, 
+        ω::S, 
         originalβ0::T, 
         betaprimemultiplier::T,
         finalbetaprime::T, 
         proportiondetected::T
-    ) where T
+    ) where {S, T}
         β0 >= 0 || throw(DomainError(β0, "β0 must not be negative"))
         0 <= β1 <= 1 || throw(_proportionerror(β1, "β1"))
         -π <= ϕ <= π || throw(DomainError(ϕ, "ϕ must be between -π and π"))
@@ -44,7 +44,7 @@ abstract type AbstractParameters end
         0 <= proportiondetected <= 1 || throw(
             _proportionerror(proportiondetected, "proportiondetected")
         )
-        return new{T}(
+        return new{S, T}(
             β0, 
             β1, 
             ϕ, 
@@ -60,13 +60,13 @@ abstract type AbstractParameters end
     end
 end     
 
-function SirnsParameters(β0::T, γ, μ, ψ::T, ω::T) where T  
+function SirnsParameters(β0::T, γ, μ, ψ::T, ω) where T  
     β1 = zero(T)
     ϕ = zero(T)
     return SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω) 
 end 
 
-function SirnsParameters(β0::T, β1, ϕ, γ, μ, ψ::T, ω::T) where T  
+function SirnsParameters(β0::T, β1, ϕ, γ, μ, ψ::T, ω) where T  
     betaprimemultiplier = one(T)
     finalbetaprime = one(T)
     return SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, β0, betaprimemultiplier, finalbetaprime) 
@@ -79,7 +79,7 @@ function SirnsParameters(
     γ, 
     μ,
     ψ::T,
-    ω::T, 
+    ω, 
     originalβ0, 
     betaprimemultiplier, 
     finalbetaprime
