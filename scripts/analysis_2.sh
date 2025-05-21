@@ -9,10 +9,12 @@
 export JULIA_NUM_THREADS=8
 module load Julia/1.11.3-linux-x86_64
 
-julia scripts/rsvanalysis.jl "2.0" & 
-julia scripts/rsvanalysis.jl "1.0" & 
-julia scripts/rsvanalysis.jl "0.5" &
-julia scripts/rsvanalysis.jl "0.2" & 
+r0=2.0
+
+julia scripts/rsvanalysis.jl "$r0" "2.0" & 
+julia scripts/rsvanalysis.jl "$r0" "1.0" & 
+julia scripts/rsvanalysis.jl "$r0" "0.5" &
+julia scripts/rsvanalysis.jl "$r0" "0.2" & 
 
 wait
 
