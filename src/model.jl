@@ -38,12 +38,12 @@ function transformedsirns!(du, u, p, t)
     sirns!(du, u, newparms, t)
 end
 
-function transformparameters(p; omega, gamma=48.7, mu=0.0087)
-    logr0, logitβ1, ϕ, logψ, logitbetaprimemultiplier, logitfinalbetaprime, logitproportiondetected, betaprime = p
-    r0 = exp(logr0)
-    r0 * (gamma + mu) * betaprime >= 0 || @warn "Negative β0 with p=$p"
+function transformparameters(p; r0, omega, gamma=48.7, mu=0.0087)
+    r0 >= 0 || DomainError(r0, "r0 must not be negative")
+    logitβ1, ϕ, logψ, logitβ′multiplier, logitfinalβ′, logitproportiondetected, β′, = p
+    r0 * (gamma + mu) * β′ >= 0 || @warn "Negative β0 with p=$p, r0=$r0"
     return SirnsParameters(
-        max(r0 * (gamma + mu) * betaprime, zero(r0 * (gamma + mu) * betaprime)),  # β0::T
+        max(r0 * (gamma + mu) * β′, zero(r0 * (gamma + mu) * β′)),  # β0::T
         _logistic(logitβ1),  # β1::T
         ϕ,  # ϕ::T
         gamma,  # γ::Float64
@@ -51,15 +51,14 @@ function transformparameters(p; omega, gamma=48.7, mu=0.0087)
         exp(logψ),  # ψ::T
         omega,  # ω::T
         r0 * (gamma + mu),  # originalβ0::T
-        _logistic(logitbetaprimemultiplier),  # betaprimemultiplier::T
-        _logistic(logitfinalbetaprime),  # finalbetaprime::T
+        _logistic(logitβ′multiplier),  # betaprimemultiplier::T
+        _logistic(logitfinalβ′),  # finalbetaprime::T
         _logistic(logitproportiondetected),  # proportiondetected::T
     ) 
 end
 
-function transformparameterswithoutbetaprime(p; omega, gamma=48.7, mu=0.0087)
-    logr0, logitβ1, ϕ, logψ, logitbetaprimemultiplier, logitfinalbetaprime, logitproportiondetected, = p
-    r0 = exp(logr0)
+function transformparameterswithoutbetaprime(p; r0, omega, gamma=48.7, mu=0.0087)
+    logitβ1, ϕ, logψ, logitβ′multiplier, logitfinalβ′, logitproportiondetected, = p
     return SirnsParameters(
         r0 * (gamma + mu),  # β0::T
         _logistic(logitβ1),  # β1::T
@@ -69,8 +68,8 @@ function transformparameterswithoutbetaprime(p; omega, gamma=48.7, mu=0.0087)
         exp(logψ),  # ψ::T
         omega,  # ω::T
         r0 * (gamma + mu),  # originalβ0::T
-        _logistic(logitbetaprimemultiplier),  # betaprimemultiplier::T
-        _logistic(logitfinalbetaprime),  # finalbetaprime::T
+        _logistic(logitβ′multiplier),  # betaprimemultiplier::T
+        _logistic(logitfinalβ′),  # finalbetaprime::T
         _logistic(logitproportiondetected),  # proportiondetected::T
     ) 
 end
@@ -145,18 +144,11 @@ function __sirns_u0(S0::S, I0, R1, R2, R3, phi::Number, t0) where S
         sin(2π * t0 - phi),  # x2
         zero(S),  # cumulative cases
     ]
-    #=
-    u0 = Vector{S}(undef, 8)
-    for (i, v) ∈ enumerate([ S0, I0, R1, R2, R3 ]) u0[i] = v end  
-    u0[6] = cos(2π * t0 - phi)  # x1 
-    u0[7] = sin(2π * t0 - phi)  # x2
-    u0[8] = zero(S)  # cumulative cases
-    =#
     return u0
 end 
 
-function sirns_u0_transformedp(args...; p, omega, kwargs...)
-    newparms = transformparameterswithoutbetaprime(p; omega)
+function sirns_u0_transformedp(args...; p, r0, omega, kwargs...)
+    newparms = transformparameterswithoutbetaprime(p; r0, omega)
     return sirns_u0(args...; p=newparms, kwargs...)
 end
 
@@ -196,24 +188,6 @@ end
 
 casespertimeblock(d::Dict{Symbol, <:Any}) = casespertimeblock(d[:cc])
 casespertimeblock(d::Dict{<:AbstractString, <:Any}) = casespertimeblock(d["cc"])
-#=
-function casespertimeblock(cc::Vector{T}) where T
-    cases = Vector{T}(undef, length(cc) - 1)
-    for i ∈ eachindex(cc)
-        i == 1 && continue 
-        newcases = cc[i] - cc[i-1] 
-        # newcases should always be positive but occasionally the solver returns 
-        # a very slightly negative value, such as -3e-298. Such values cannot be 
-        # used with a Poisson distribution 
-        if newcases < 0  
-            cases[i-1] = zero(newcases) 
-        else             
-            cases[i-1] = newcases
-        end
-    end
-    return cases
-end
-=#
 casespertimeblock(cc::Vector) = [ _newcases(cc, t) for t ∈ 2:length(cc) ]
 
 _newcases(cc, t) = cc[t] - cc[t-1] < 0 ? zero(cc[t] - cc[t-1]) : cc[t] - cc[t-1]
