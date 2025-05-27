@@ -40,17 +40,17 @@ end
 
 function transformparameters(p; r0, omega, gamma=48.7, mu=0.0087)
     r0 >= 0 || DomainError(r0, "r0 must not be negative")
-    logitβ1, ϕ, logψ, logitβ′multiplier, logitfinalβ′, logitproportiondetected, β′, = p
-    r0 * (gamma + mu) * β′ >= 0 || @warn "Negative β0 with p=$p, r0=$r0"
+    logitβ1, ϕ, logγ, logψ, logitβ′multiplier, logitfinalβ′, logitproportiondetected, β′, = p
+    r0 * (exp(logγ) + mu) * β′ >= 0 || @warn "Negative β0 with p=$p, r0=$r0"
     return SirnsParameters(
-        max(r0 * (gamma + mu) * β′, zero(r0 * (gamma + mu) * β′)),  # β0::T
+        max(r0 * (exp(logγ) + mu) * β′, zero(r0 * (gamma + mu) * β′)),  # β0::T
         _logistic(logitβ1),  # β1::T
         ϕ,  # ϕ::T
-        gamma,  # γ::Float64
+        exp(logγ),  # γ::Float64
         mu,  # μ::Float64 
         exp(logψ),  # ψ::T
         omega,  # ω::T
-        r0 * (gamma + mu),  # originalβ0::T
+        r0 * (exp(logγ) + mu),  # originalβ0::T
         _logistic(logitβ′multiplier),  # betaprimemultiplier::T
         _logistic(logitfinalβ′),  # finalbetaprime::T
         _logistic(logitproportiondetected),  # proportiondetected::T
@@ -58,16 +58,16 @@ function transformparameters(p; r0, omega, gamma=48.7, mu=0.0087)
 end
 
 function transformparameterswithoutbetaprime(p; r0, omega, gamma=48.7, mu=0.0087)
-    logitβ1, ϕ, logψ, logitβ′multiplier, logitfinalβ′, logitproportiondetected, = p
+    logitβ1, ϕ, logγ, logψ, logitβ′multiplier, logitfinalβ′, logitproportiondetected, = p
     return SirnsParameters(
-        r0 * (gamma + mu),  # β0::T
+        r0 * (exp(logγ) + mu),  # β0::T
         _logistic(logitβ1),  # β1::T
         ϕ,  # ϕ::T
-        gamma,  # γ::Float64
+        exp(logγ),  # γ::Float64
         mu,  # μ::Float64 
         exp(logψ),  # ψ::T
         omega,  # ω::T
-        r0 * (gamma + mu),  # originalβ0::T
+        r0 * (exp(logγ) + mu),  # originalβ0::T
         _logistic(logitβ′multiplier),  # betaprimemultiplier::T
         _logistic(logitfinalβ′),  # finalbetaprime::T
         _logistic(logitproportiondetected),  # proportiondetected::T

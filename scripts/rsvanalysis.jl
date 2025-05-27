@@ -18,16 +18,16 @@ testrun = true
 if length(ARGS) == 2
     const r0 = parse(Float64, ARGS[1])
     const omega = parse(Float64, ARGS[2])
-    n_rounds = 1000
+    n_rounds = 2000
     optimizationsolvermaxiters = 1_000_000
 else
     const r0 = 2.0
     const omega = 0.5
-    n_rounds = testrun ? 25 : 10_000
-    optimizationsolvermaxiters = testrun ? 25_000 : 1e6
+    n_rounds = testrun ? 25 : 2000
+    optimizationsolvermaxiters = testrun ? 2500 : 1_000_000
 end
 
-println("Starting with omega=$omega, n_rounds=$n_rounds, optimizationsolvermaxiters=$optimizationsolvermaxiters")
+println("Starting with r0=$r0, omega=$omega, n_rounds=$n_rounds, optimizationsolvermaxiters=$optimizationsolvermaxiters")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -49,6 +49,7 @@ function loss(
     parms;  # a vector containing the following in order:
         # logitβ1, 
         # ϕ, 
+        # logγ,
         # logψ, 
         # logitbetaprimemultiplier 
         # logitfinalbetaprime, 
@@ -70,12 +71,12 @@ function loss(
     r0,
     omega,
 ) 
-    if parms[2] < -π || parms[2] > π || parms[7] < 0
+    if parms[2] < -π || parms[2] > π || parms[8] < 0
         return Inf
     end
 
-    I0 = ImmuneBoostingODEs._logistic(parms[9])
-    S0 = min(ImmuneBoostingODEs._logistic(parms[8]), 1 - I0)
+    I0 = ImmuneBoostingODEs._logistic(parms[10])
+    S0 = min(ImmuneBoostingODEs._logistic(parms[9]), 1 - I0)
     u0 = sirns_u0_transformedp(S0, I0; p=parms, r0, omega, equalrs, t0)
     sol = solve(prob, alg; p=parms, u0, callback, saveat, abstol, maxiters,)
 
@@ -92,14 +93,14 @@ function loss(
                 pdf(
                     NegativeBinomial(
                         0.25,
-                        0.25 / (0.25 + incidentcases[t] * ImmuneBoostingODEs._logistic(parms[6]))
+                        0.25 / (0.25 + incidentcases[t] * ImmuneBoostingODEs._logistic(parms[7]))
                     ),
                     data[t]
                 )
             )
             for t ∈ eachindex(data)
         ]
-    ) - abs2(ImmuneBoostingODEs._logistic(parms[5]) - parms[7])  # so that parms[7] has some influence on `loss` 
+    ) - abs2(ImmuneBoostingODEs._logistic(parms[6]) - parms[8])  # so that parms[8] has some influence on `loss` 
     return loss
 end
 
@@ -111,15 +112,14 @@ function optimizesirns(
     equalrs=true,
     t0=1996.737,
     tspan=( 1996.737, last(saveat) ),
-    gamma=48.7,
     mu=0.0087,
     alg=Vern9(; lazy=false),
     odesolverabstol=1e-15,
     odesolvermaxiters=5e7,
     optimizationsolvermaxiters=1e5,
     adtype=Optimization.AutoZygote(),
-    lb=[ -5.3, -2, -0.7, -2, 0.24, -6.6, 0, -4.3, -10.3 ],
-    ub=[ 0, 2, 1.1, 0.2, 4.2, -2.6, 1, 4.3, -1.7 ],
+    lb=[ -5.3, -2, 2.8, -0.7, -2, 0.24, -6.6, 0, -4.3, -10.3 ],
+    ub=[ 0, 2, 5.2, 1.1, 0.2, 4.2, -2.6, 1, 4.3, -1.7 ],
     nt=10,
     rt=0.975,
     r_expand=2.0,
@@ -167,15 +167,15 @@ function optimizesirns(
     return result_ode
 end
 
-adjustedparams(p) = [ p[1:6]; 4.0; p[8]; p[9] .+ 6 ]
+adjustedparams(p) = [ p[1:7]; 4.0; p[9]; p[10] .+ 6 ]
 
 initial_params = Vector{Vector{Float64}}(undef, 8)
 
 Threads.@threads for i ∈ 1:8 
     Random.seed!(n_rounds + optimizationsolvermaxiters + round(Int, omega) + i)
 
-    lb = [ -Inf, -0.8, -4.0, -Inf, -Inf, -3.892, 0.0, -4.3, -10.3 ]
-    ub = [ Inf, 0.8, 3.0, Inf, Inf, -3.892, 1.0, 4.3, -1.7 ]
+    lb = [ -Inf, -0.8, 3.3, -4.0, -Inf, -Inf, -3.892, 0.0, -4.3, -10.3 ]
+    ub = [ Inf, 0.8, 4.4, 3.0, Inf, Inf, -3.892, 1.0, 4.3, -1.7 ]
     
     if isodd(i)
         lb[1] = ub[1] = log(0.01 / 0.99)
@@ -184,32 +184,52 @@ Threads.@threads for i ∈ 1:8
     end
 
     if i ∈ [ 1, 2, 5, 6 ]
-        lb[4] = ub[4] = log(0.1 / 0.9)
+        lb[5] = ub[5] = log(0.1 / 0.9)
     else
-        lb[4] = ub[4] = log(0.9 / 0.1)
+        lb[5] = ub[5] = log(0.9 / 0.1)
     end
 
     if i <= 4
-        lb[5] = ub[5] = log(0.75 / 0.25)
+        lb[6] = ub[6] = log(0.75 / 0.25)
     else
-        lb[5] = ub[5] = log(0.95 / 0.05)
+        lb[6] = ub[6] = log(0.95 / 0.05)
     end
 
     _add = (ub .- lb) .* 0.5
     ip = optimizesirns(
         data.Cases, lb .+ _add;
-        callback=optimcbs, saveat, optimizationsolvermaxiters, lb, ub, verbosity=0, r0, omega
+        callback=optimcbs,
+        saveat, 
+        optimizationsolvermaxiters, 
+        lb, 
+        ub, 
+        verbosity=0, 
+        r0, 
+        omega,
     )
     initial_params[i] = adjustedparams(ip.minimizer)
     @info "initial_params[$i] $(ip.retcode)"
 end
 
+chaindictinit = Dict(
+    "initial_params" => initial_params,
+    "n_rounds" => n_rounds,
+    "optimizationsolvermaxiters" => optimizationsolvermaxiters,
+    "r0" => r0,
+    "omega" => omega,
+)
+
+safesave(
+    datadir("sims", "chaindictinit_nrounds_$(n_rounds)_r0_$(r0)_omega_$omega.jld2"), 
+    chaindictinit
+)
+
 tspan = ( 1996.737, last(saveat) )
 initialp = SirnsParameters(
-    r0 * (48.7 + 0.0087),  # β0::T
+    r0 * (48.7 + 0.0087),  # β0::S
     0.1,  # β1::T
     0.0,  # ϕ::T
-    48.7,  # γ::Float64
+    48.7,  # γ::T
     0.0087,  # μ::Float64 
     1.0,  # ψ::T
     omega,  # ω::S
@@ -388,13 +408,57 @@ println("Completed with r0=$r0, omega=$omega, n_rounds=$n_rounds, optimizationso
 
 
 
-
 #=
 
-chaindict02 = load(datadir("sims", "chaindict_nrounds_1000_omega_0.2.jld2"))
-chaindf02 = DataFrame(chaindict02["chain"])
-plotchains(chaindf02)
+chaindict15_05 = load(datadir("sims", "chaindict_nrounds_1000_r0_1.5_omega_0.5.jld2"))
+chaindf15_05 = DataFrame(chaindict15_05["chain"])
+plotchains(chaindf15_05)
 
+chaindict15_1 = load(datadir("sims", "chaindict_nrounds_1000_r0_1.5_omega_1.0.jld2"))
+chaindf15_1 = DataFrame(chaindict15_1["chain"])
+plotchains(chaindf15_1)
+
+chaindict15_2 = load(datadir("sims", "chaindict_nrounds_1000_r0_1.5_omega_2.0.jld2"))
+chaindf15_2 = DataFrame(chaindict15_2["chain"])
+plotchains(chaindf15_2)
+
+chaindict2_05 = load(datadir("sims", "chaindict_nrounds_1000_r0_2.0_omega_0.5.jld2"))
+chaindf2_05 = DataFrame(chaindict2_05["chain"])
+plotchains(chaindf2_05)
+
+chaindict2_1 = load(datadir("sims", "chaindict_nrounds_1000_r0_2.0_omega_1.0.jld2"))
+chaindf2_1 = DataFrame(chaindict2_1["chain"])
+plotchains(chaindf2_1)
+
+chaindict2_2 = load(datadir("sims", "chaindict_nrounds_1000_r0_2.0_omega_2.0.jld2"))
+chaindf2_2 = DataFrame(chaindict2_2["chain"])
+plotchains(chaindf2_2)
+
+chaindict3_05 = load(datadir("sims", "chaindict_nrounds_1000_r0_3.0_omega_0.5.jld2"))
+chaindf3_05 = DataFrame(chaindict3_05["chain"])
+plotchains(chaindf3_05)
+
+chaindict3_1 = load(datadir("sims", "chaindict_nrounds_1000_r0_3.0_omega_1.0.jld2"))
+chaindf3_1 = DataFrame(chaindict3_1["chain"])
+plotchains(chaindf3_1)
+
+chaindict3_2 = load(datadir("sims", "chaindict_nrounds_1000_r0_3.0_omega_2.0.jld2"))
+chaindf3_2 = DataFrame(chaindict3_2["chain"])
+plotchains(chaindf3_2)
+
+chaindict5_05 = load(datadir("sims", "chaindict_nrounds_1000_r0_5.0_omega_0.5.jld2"))
+chaindf5_05 = DataFrame(chaindict5_05["chain"])
+plotchains(chaindf5_05)
+
+chaindict5_1 = load(datadir("sims", "chaindict_nrounds_1000_r0_5.0_omega_1.0.jld2"))
+chaindf5_1 = DataFrame(chaindict5_1["chain"])
+plotchains(chaindf5_1)
+
+chaindict5_2 = load(datadir("sims", "chaindict_nrounds_1000_r0_5.0_omega_2.0.jld2"))
+chaindf5_2 = DataFrame(chaindict5_2["chain"])
+plotchains(chaindf5_2)
+=#
+#=
 chaindict05 = load(datadir("sims", "chaindict_nrounds_1000_omega_0.5.jld2"))
 chaindf05 = DataFrame(chaindict05["chain"])
 plotchains(chaindf05)

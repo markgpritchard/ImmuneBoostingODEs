@@ -5,7 +5,7 @@ abstract type AbstractParameters end
     β0::S
     β1::T
     ϕ::T
-    γ::Float64
+    γ::T
     μ::Float64 
     ψ::T
     ω::U
@@ -18,7 +18,7 @@ abstract type AbstractParameters end
         β0::S, 
         β1::T, 
         ϕ::T, 
-        γ, 
+        γ::T, 
         μ, 
         ψ::T, 
         ω::U, 
@@ -60,13 +60,13 @@ abstract type AbstractParameters end
     end
 end     
 
-function SirnsParameters(β0, γ, μ, ψ::T, ω) where T  
+function SirnsParameters(β0, γ::T, μ, ψ::T, ω) where T  
     β1 = zero(T)
     ϕ = zero(T)
     return SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω) 
 end 
 
-function SirnsParameters(β0, β1::T, ϕ::T, γ, μ, ψ::T, ω) where T  
+function SirnsParameters(β0, β1::T, ϕ::T, γ::T, μ, ψ::T, ω) where T  
     betaprimemultiplier = one(T)
     finalbetaprime = one(T)
     return SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, β0, betaprimemultiplier, finalbetaprime) 
@@ -76,7 +76,7 @@ function SirnsParameters(
     β0, 
     β1::T, 
     ϕ::T, 
-    γ, 
+    γ::T, 
     μ,
     ψ::T,
     ω, 
@@ -104,7 +104,7 @@ function SirnsParameters(
     β0, 
     β1::T, 
     ϕ::T, 
-    γ, 
+    γ::T, 
     μ, 
     ψ::Integer, 
     ω, 

@@ -5,6 +5,7 @@ _logistic(x) = 1 / (1 + exp(-x))
     incidence, prob, cbs, saveat;
     betaone_logitprior=Normal(-2.3, 1.5),  # mean of 0.1 when transformed
     phi_prior=truncated(Normal(0, 1), -π, π),
+    gamma_logprior=Normal(log(48.7), 0.4),
     psi_logprior=Normal(0, 2),
     betaprimemultiplier_logitprior=Normal(0, 1.5),
     finalbetaprime_logitprior=Normal(log(0.9 / 0.1), 1.0),
@@ -12,13 +13,13 @@ _logistic(x) = 1 / (1 + exp(-x))
     invrparameter_prior=Exponential(1),
     S0max_logitprior=TDist(2),
     I0_transformedlogitprior=TDist(2),
-    gamma=48.7,
     mu=0.0087,
     r0,
     omega,
 )
     logitβ1 ~ betaone_logitprior
     ϕ ~ phi_prior
+    logγ ~ gamma_logprior
     logψ ~ psi_logprior
     logitbetaprimemultiplier ~ betaprimemultiplier_logitprior
     logitfinalbetaprime ~ finalbetaprime_logitprior
@@ -27,21 +28,27 @@ _logistic(x) = 1 / (1 + exp(-x))
     logitS0max ~ S0max_logitprior
     transformedlogitI0 ~ I0_transformedlogitprior
 
-    if 1 / invrparameter <= 0
+    # avoid errors by returning -Inf
+    if 1 / invrparameter <= 0 || 
+        isnan(_logistic(logitβ1)) || 
+        isnan(_logistic(logitbetaprimemultiplier)) ||
+        isnan(_logistic(logitfinalbetaprime)) ||
+        isnan(_logistic(logitproportiondetected)) 
+        
         Turing.@addlogprob! -Inf
         return nothing
     end
 
     T = typeof(logitbetaprimemultiplier)
     p = SirnsParameters(
-        T(r0 * (gamma + mu)),  # β0::S
+        T(r0 * (exp(logγ) + mu)),  # β0::S
         _logistic(logitβ1),  # β1::T
         ϕ,  # ϕ::T
-        gamma,  # γ::Float64
+        exp(logγ),  # γ::T
         mu,  # μ::Float64 
         exp(logψ),  # ψ::T
         omega,  # ω::U
-        r0 * (gamma + mu),  # originalβ0::V
+        r0 * (exp(logγ) + mu),  # originalβ0::V
         _logistic(logitbetaprimemultiplier),  # betaprimemultiplier::T
         _logistic(logitfinalbetaprime),  # finalbetaprime::T
         _logistic(logitproportiondetected),  # proportiondetected::T
