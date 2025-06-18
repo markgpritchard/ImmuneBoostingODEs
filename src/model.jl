@@ -17,20 +17,25 @@ function sirns!(du, u, p::AbstractParameters, t)
     du[8] = λ * S  # cumulative cases 
 end 
 
-function _sirnslambda(p::SirnsParameters, u)
-    S, I, R1, R2, R3, x1, = u
-    β = p.β0 * (1 + p.β1 * x1)
+function _sirnslambda(p, u)
+    β = _sirnsbeta(p, u)
+    I = u[2]
     λ = β * I
     return λ 
 end
 
-function _sirnslambda(p::AbstractVector, u)
-    β0, β1, = p
-    S, I, R1, R2, R3, x1, = u
-    β = β0 * (1 + β1 * x1)
-    λ = β * I
-    return λ 
+function _sirnsbeta(p::SirnsParameters, u)
+    x1 = u[6]
+    return _sirnsbeta(p.β0, p.β1, x1) 
 end
+
+function _sirnsbeta(p::AbstractVector, u)
+    β0, β1, = p
+    x1 = u[6]
+    return _sirnsbeta(β0, β1, x1) 
+end
+
+_sirnsbeta(β0, β1, x1) = β0 * (1 + β1 * x1)
 
 #@memoize function transformedsirns!(du, u, p, t)
 function transformedsirns!(du, u, p, t)

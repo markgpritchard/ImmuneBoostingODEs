@@ -24,7 +24,7 @@ else
     const r0 = 2.0
     const omega = 0.5
     n_rounds = testrun ? 25 : 2000
-    optimizationsolvermaxiters = testrun ? 2500 : 1_000_000
+    optimizationsolvermaxiters = testrun ? 10_000 : 1_000_000
 end
 
 println("Starting with r0=$r0, omega=$omega, n_rounds=$n_rounds, optimizationsolvermaxiters=$optimizationsolvermaxiters")
@@ -111,7 +111,7 @@ function optimizesirns(
     saveat,
     equalrs=true,
     t0=1996.737,
-    tspan=( 1996.737, last(saveat) ),
+    tspan=( saveat[1], last(saveat) ),
     mu=0.0087,
     alg=Vern9(; lazy=false),
     odesolverabstol=1e-15,
@@ -208,7 +208,7 @@ Threads.@threads for i ∈ 1:8
         omega,
     )
     initial_params[i] = adjustedparams(ip.minimizer)
-    @info "initial_params[$i] $(ip.retcode)"
+    @info "initial_params[$i]=$(initial_params[i]), $(ip.retcode)"
 end
 
 chaindictinit = Dict(
@@ -224,7 +224,7 @@ safesave(
     chaindictinit
 )
 
-tspan = ( 1996.737, last(saveat) )
+tspan = ( saveat[1], last(saveat) )
 initialp = SirnsParameters(
     r0 * (48.7 + 0.0087),  # β0::S
     0.1,  # β1::T
@@ -318,11 +318,12 @@ Random.seed!(n_rounds + optimizationsolvermaxiters + round(Int, omega))
 
 chain = sample(
     fitmodel(data.Cases, prob, cbs, saveat; r0, omega),
+    #Turing.NUTS(0.65; adtype=AutoReverseDiff(false)),
     Turing.NUTS(0.65),
     MCMCThreads(),
     n_rounds,
-    8;
-    initial_params,
+    4;
+    #initial_params,
 )
 #=
 chaindf = DataFrame(chain)
@@ -408,17 +409,19 @@ println("Completed with r0=$r0, omega=$omega, n_rounds=$n_rounds, optimizationso
 
 
 
-#=
+chaindict15_02 = load(datadir("sims", "chaindict_nrounds_2000_r0_1.5_omega_0.2.jld2"))
+chaindf15_02 = DataFrame(chaindict15_02["chain"])
+plotchains(chaindf15_02)
 
-chaindict15_05 = load(datadir("sims", "chaindict_nrounds_1000_r0_1.5_omega_0.5.jld2"))
+chaindict15_05 = load(datadir("sims", "chaindict_nrounds_2000_r0_1.5_omega_0.5.jld2"))
 chaindf15_05 = DataFrame(chaindict15_05["chain"])
 plotchains(chaindf15_05)
 
-chaindict15_1 = load(datadir("sims", "chaindict_nrounds_1000_r0_1.5_omega_1.0.jld2"))
+chaindict15_1 = load(datadir("sims", "chaindict_nrounds_2000_r0_1.5_omega_1.0.jld2"))
 chaindf15_1 = DataFrame(chaindict15_1["chain"])
 plotchains(chaindf15_1)
 
-chaindict15_2 = load(datadir("sims", "chaindict_nrounds_1000_r0_1.5_omega_2.0.jld2"))
+chaindict15_2 = load(datadir("sims", "chaindict_nrounds_2000_r0_1.5_omega_2.0.jld2"))
 chaindf15_2 = DataFrame(chaindict15_2["chain"])
 plotchains(chaindf15_2)
 
@@ -457,17 +460,16 @@ plotchains(chaindf5_1)
 chaindict5_2 = load(datadir("sims", "chaindict_nrounds_1000_r0_5.0_omega_2.0.jld2"))
 chaindf5_2 = DataFrame(chaindict5_2["chain"])
 plotchains(chaindf5_2)
-=#
-#=
-chaindict05 = load(datadir("sims", "chaindict_nrounds_1000_omega_0.5.jld2"))
-chaindf05 = DataFrame(chaindict05["chain"])
-plotchains(chaindf05)
 
-chaindict1 = load(datadir("sims", "chaindict_nrounds_1000_omega_1.0.jld2"))
-chaindf1 = DataFrame(chaindict1["chain"])
-plotchains(chaindf1)
+chaindict9_05 = load(datadir("sims", "chaindict_nrounds_1000_r0_9.0_omega_0.5.jld2"))
+chaindf9_05 = DataFrame(chaindict9_05["chain"])
+plotchains(chaindf9_05)
 
-chaindict2 = load(datadir("sims", "chaindict_nrounds_1000_omega_2.0.jld2"))
-chaindf2 = DataFrame(chaindict2["chain"])
-plotchains(chaindf2)
-=#
+chaindict9_1 = load(datadir("sims", "chaindict_nrounds_1000_r0_9.0_omega_1.0.jld2"))
+chaindf9_1 = DataFrame(chaindict9_1["chain"])
+plotchains(chaindf9_1)
+
+chaindict9_2 = load(datadir("sims", "chaindict_nrounds_1000_r0_9.0_omega_2.0.jld2"))
+chaindf9_2 = DataFrame(chaindict9_2["chain"])
+plotchains(chaindf9_2)
+

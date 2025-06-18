@@ -10,9 +10,12 @@ _logistic(x) = 1 / (1 + exp(-x))
     betaprimemultiplier_logitprior=Normal(0, 1.5),
     finalbetaprime_logitprior=Normal(log(0.9 / 0.1), 1.0),
     proportiondetected_logitprior=Normal(log(0.01), 1.0),
-    invrparameter_prior=Exponential(1),
-    S0max_logitprior=TDist(2),
-    I0_transformedlogitprior=TDist(2),
+    #invrparameter_prior=Exponential(1),
+    rparameter_prior=Exponential(1),
+    S0_logprior=TDist(2),
+    I0_logprior=TDist(2),
+    R10_logprior=TDist(2),
+    R20_logprior=TDist(2),
     mu=0.0087,
     r0,
     omega,
@@ -24,13 +27,14 @@ _logistic(x) = 1 / (1 + exp(-x))
     logitbetaprimemultiplier ~ betaprimemultiplier_logitprior
     logitfinalbetaprime ~ finalbetaprime_logitprior
     logitproportiondetected ~ proportiondetected_logitprior
-    invrparameter ~ invrparameter_prior
-    logitS0max ~ S0max_logitprior
-    transformedlogitI0 ~ I0_transformedlogitprior
+    rparameter ~ rparameter_prior
+    logS0 ~ S0_logprior
+    logI0 ~ I0_logprior
+    logR10 ~ R10_logprior
+    logR20 ~ R20_logprior
 
-    # avoid errors by returning -Inf
-    if 1 / invrparameter <= 0 || 
-        isnan(_logistic(logitβ1)) || 
+    # avoid errors caused by extreme values of these parameters
+    if isnan(_logistic(logitβ1)) || 
         isnan(_logistic(logitbetaprimemultiplier)) ||
         isnan(_logistic(logitfinalbetaprime)) ||
         isnan(_logistic(logitproportiondetected)) 
@@ -54,9 +58,13 @@ _logistic(x) = 1 / (1 + exp(-x))
         _logistic(logitproportiondetected),  # proportiondetected::T
     )
 
-    I0 = _logistic(transformedlogitI0 - 6)
-    S0 = min(_logistic(logitS0max), 1 - I0)
-    u0 = sirns_u0(S0, I0; p, equalrs=true, t0=1996.737)  # 10 years before data collection
+    _popdenom = 1 + exp(logS0) + exp(logI0) + exp(logR10) + exp(logR20)
+    S0 = exp(logS0) / _popdenom
+    I0 = exp(logI0) / _popdenom
+    R10 = exp(logR10) / _popdenom 
+    R20 = exp(logR20) / _popdenom 
+    R30 = 1 / _popdenom
+    u0 = sirns_u0(S0, I0, R10, R20, R30; p, t0=saveat[1])
 
     sol = solve(
         prob, Vern9(; lazy=false); 
@@ -74,14 +82,19 @@ _logistic(x) = 1 / (1 + exp(-x))
         return nothing
     end
 
-    rparameter = 1 / invrparameter
     cumulativecases = modelcompartments(sol, 1)
     incidentcases = casespertimeblock(cumulativecases) .* 5_450_000
 
-    for i ∈ eachindex(incidentcases)
-        incidence[i] ~ NegativeBinomial(
-            rparameter,
-            rparameter / (rparameter + incidentcases[i] * p.proportiondetected)
-        )
+    pparameter = rparameter ./ (rparameter .+ incidentcases .* p.proportiondetected) 
+
+    if rparameter <= 0 || 
+        isnan(minimum(pparameter)) || 
+        minimum(pparameter) <= 0 || 
+        maximum(pparameter) > 1 
+
+        Turing.@addlogprob! -Inf
+        return nothing
     end
+
+    incidence ~ arraydist(NegativeBinomial.(rparameter, pparameter))
 end
