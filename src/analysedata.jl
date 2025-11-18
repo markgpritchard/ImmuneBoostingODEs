@@ -51,6 +51,26 @@ function fourierhmdata!(densities, m, freq_overall, i)
     densities[:, i] = spectraldensity 
 end 
 
+function simulatedfourierhmdata(
+    immuneduration, simparms, β1=0, ϕ=0; 
+    dir=datadir("sims"), prefix="pl_modelincidence", tspan=(-1000, 20),
+)
+    @unpack γ, μ, psis, R0 = simparms
+    β0 = R0 * (γ + μ)
+    ω = 1 / immuneduration 
+    kw = @ntuple tspan
+    results = Vector{NamedTuple{(:gt, :incidence), Tuple{Vector{Float64}, Vector{Float64}}}}(
+        undef, length(psis)
+    )
+    for (i, ψ) ∈ enumerate(psis)
+        config = @dict β0 β1 ϕ γ μ ψ ω kw
+        pl_result = produce_or_load(pl_modelincidence, config, dir; prefix)
+        @unpack gt, incidence = pl_result[1]
+        results[i] = @ntuple gt incidence
+    end
+    return fourierhmdata(results)
+end
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Parameter fitting 
@@ -125,9 +145,9 @@ function runfittedsimulations(df, omega, saveat, cbs)
 end
 
 function fittedsimulationquantiles(
-    modelmat::AbstractMatrix, quantiles::AbstractVector=[ 0.05, 0.5, 0.95 ]
+    modelmat::AbstractMatrix, quantiles::AbstractVector=[0.05, 0.5, 0.95]
 )
-    return [ quantile(skipmissing(modelmat[i, :]), quantiles) for i ∈ axes(modelmat, 1) ]
+    return [quantile(skipmissing(modelmat[i, :]), quantiles) for i ∈ axes(modelmat, 1)]
 end
 
 function fittedsimulationquantiles(

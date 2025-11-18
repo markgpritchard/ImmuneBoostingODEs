@@ -20,24 +20,35 @@
     βreduction1 ~ betareduction1prior
     βreduction2 ~ betareduction2prior
     detection ~ detectionprior
+    minsigma2 ~ Beta(1, 2)
 
     p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, β0, βreduction1 * β0, βreduction2 * β0)
     u0 = sirns_u0(0.01, 2e-5; p, equalrs=true, t0=1996.737)  # 10 years before data collection
 
     sol = memosolver(
         prob, Vern9(; lazy=false); 
-        p, u0, callback=cbs, saveat, save_idxs=[ 8 ], 
-        abstol=1e-15, maxiters=1e8, verbose=false,
+        p, 
+        u0, 
+        callback=cbs, 
+        saveat, 
+        save_idxs=[ 8 ], 
+        abstol=1e-15, 
+        maxiters=1e8, 
+        verbose=false,
     )
     if sol.retcode != :Success
-        Turing.@addlogprob! -Inf
+        @addlogprob! -Inf
         return nothing
     end
 
     cumulativecases = modelcompartments(sol, 1)
-    incidentcases = casespertimeblock(cumulativecases) .* 5_450_000 .* detection
+    weeklyincidentcases = casespertimeblock(cumulativecases) .* 5_450_000 
 
-    for i ∈ eachindex(incidentcases)
-        incidence[i] ~ Poisson(incidentcases[i] + 1e-10)
-    end
+    # Normal approximation of Binomial to avoid forcing integer values 
+    np = weeklyincidentcases .* detection
+    npminus = np .* (1 - detection) .+ minsigma2
+    
+    # Normal approximation of Binomial to avoid forcing integer values 
+    incidence ~ arraydist(Normal.(np, NaNMath.sqrt.(npminus)))
+    return nothing
 end

@@ -80,7 +80,7 @@ npisim_phi0 = let
     β0 = R0 * (γ + μ)
     ω = 1 / immuneduration 
     
-    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, βreduction, 1.) 
+    p = SirnsParameters(; β0, β1, ϕ, γ, μ, ψ, ω, reducedβ0=(β0 * βreduction))  # reducedβ0, restoredβ0
     u0 = sirns_u0(.5, .001; equalrs = true, p, t0 = -.65)
     save_positions = ( false, false )
     redcb = PresetTimeCallback(reductiontime, reducetransmission!; save_positions)
@@ -105,7 +105,7 @@ npisim_phi5 = let
     β0 = R0 * (γ + μ)
     ω = 1 / immuneduration 
 
-    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, βreduction, 1.0) 
+    p = SirnsParameters(; β0, β1, ϕ, γ, μ, ψ, ω, reducedβ0=(β0 * βreduction))
     u0 = sirns_u0(.5, .001; equalrs = true, p, t0=-0.65)
     save_positions = ( false, false )
     redcb = PresetTimeCallback(reductiontime, reducetransmission!; save_positions)
@@ -130,7 +130,7 @@ npisim_phi13_2 = let
     β0 = R0 * (γ + μ)
     ω = 1 / immuneduration 
 
-    p = SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, βreduction, 1.0)
+    p = SirnsParameters(; β0, β1, ϕ, γ, μ, ψ, ω, reducedβ0=(β0 * βreduction))
     u0 = sirns_u0(.5, .001; equalrs=true, p, t0 =-0.65)
     save_positions = ( false, false )
     redcb = PresetTimeCallback(reductiontime, reducetransmission!; save_positions)

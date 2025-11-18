@@ -1,7 +1,20 @@
+using DrWatson
+@quickactivate :ImmuneBoostingODEs
 
-include("rsvfitmodel.jl")
+using DataFrames
+using DifferentialEquations
+using Random
+using Turing
+
+include("rsvsetup.jl")
 
 Random.seed!(1729)
+
+prob = fittedsimulationsetup(saveat)
+model01 = fitmodel(data.Cases, prob, cbs, saveat; omega=0.1)
+priors01 = sample(model01, Prior(), MCMCThreads(), 4000, 4)
+
+
 
 if isfile(datadir("sims", "priorsdict.jld2"))
     @info "Loading prior values"

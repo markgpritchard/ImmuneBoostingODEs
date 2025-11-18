@@ -21,35 +21,23 @@ The function `sirns_u0` can be used to produce an appropriate vector for `u`. No
 """
 function sirns!(du, u, p, t)
     # Hard-coded to run with 3 resistant subcompartments 
-    S, I, R1, R2, R3, x1, x2, = u 
-    #@assert minimum(u[1:5]) >= 0
-
-    # transmission parameter
-    β = p.β0 * (1 + p.β1 * x1) # more efficient version than cos(2π(t-ϕ))
-    #@assert β >= 0 "β<0 when p=$p, x1=$x1"
-    λ = β * I
-    
-    du[1] = 3 * p.ω * R3 - λ * S + p.μ * (1 - S)                    # S
-    du[2] = λ * S - (p.γ + p.μ) * I                                 # I
-    du[3] = p.γ * I + λ * p.ψ * (R2 + R3) - (3 * p.ω + p.μ) * R1    # R1
-    du[4] = 3 * p.ω * R1 - (3 * p.ω + λ * p.ψ + p.μ) * R2           # R2
-    du[5] = 3 * p.ω * R2 - (3 * p.ω + λ * p.ψ + p.μ) * R3           # R3
-    du[6] = -2π * x2                                                # x1
-    du[7] = 2π * x1                                                 # x2
-    du[8] = λ * S                                                   # cumulative cases 
+    β = p.β0 * (1 + p.β1 * u[6])  # β = β0 * (1 + β1 * x1)
+    λ = β * u[2]  # λ = β * I
+    return _sirns!(du, u, p, t, λ)
 end 
 
 function _sirns!(du, u, p, t, λ)
     S, I, R1, R2, R3, x1, x2, cc = u
     
-    du[1] = 3 * p.ω * R3 - λ * S + p.μ * (1 - S)                    # S
-    du[2] = λ * S - (p.γ + p.μ) * I                                 # I
-    du[3] = p.γ * I + λ * p.ψ * (R2 + R3) - (3 * p.ω + p.μ) * R1    # R1
-    du[4] = 3 * p.ω * R1 - (3 * p.ω + λ * p.ψ + p.μ) * R2           # R2
-    du[5] = 3 * p.ω * R2 - (3 * p.ω + λ * p.ψ + p.μ) * R3           # R3
-    du[6] = -2π * x2                                                # x1
-    du[7] = 2π * x1                                                 # x2
-    du[8] = λ * S                                                   # cumulative cases 
+    du[1] = 3 * p.ω * R3 - λ * S + p.μ * (1 - S)  # S
+    du[2] = λ * S - (p.γ + p.μ) * I  # I
+    du[3] = p.γ * I + λ * p.ψ * (R2 + R3) - (3 * p.ω + p.μ) * R1  # R1
+    du[4] = 3 * p.ω * R1 - (3 * p.ω + λ * p.ψ + p.μ) * R2  # R2
+    du[5] = 3 * p.ω * R2 - (3 * p.ω + λ * p.ψ + p.μ) * R3  # R3
+    du[6] = -2π * x2  # x1
+    du[7] = 2π * x1  # x2
+    du[8] = λ * S  # cumulative cases
+    return nothing 
 end
 
 sirns!(du, u, p::LambdaParms, t) = constantlambda_sirns!(du, u, p, t)
@@ -66,12 +54,8 @@ The function `sirns_u0` can be used to produce an appropriate vector for `u`. No
 
 See also `sirns!`.
 """
-function constantlambda_sirns!(du, u, p, t)
-    # Hard-coded to run with 3 resistant subcompartments 
-    S, I, R1, R2, R3, x1, x2, cc = u 
-
-    _sirns!(du, u, p, t, p.λ)
-end 
+constantlambda_sirns!(du, u, p, t) = _sirns!(du, u, p, t, p.λ)
+# Hard-coded to run with 3 resistant subcompartments 
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -100,20 +84,15 @@ All keyword arguments are passed to `DifferentialEquations.solve`. The following
 * `reltol = 1e-12` 
 * `saveat = .0005`
 """ 
-function run_sirns(u0::Vector{<:Real}, p::AbstractParameters, duration::Real; t0 = 0, kwargs...)
-    tspan = ( Float64(t0), Float64(duration) )
-    return run_sirns(u0, p, tspan; kwargs...)
+function run_sirns(u0::Vector{<:Real}, p::AbstractParameters, duration::Real; t0=0, kwargs...)
+    return run_sirns(u0, p, (t0, duration); kwargs...)
 end 
 
-function run_sirns(u0::Vector{<:Real}, p::AbstractParameters, tspan::Tuple{<:Real, <:Real}; kwargs...)
-    ts = ( Float64(tspan[1]), Float64(tspan[2]) )
-    return run_sirns(u0, p, ts; kwargs...)
-end 
-
-function run_sirns(u0::Vector{<:Real}, p::AbstractParameters, tspan::Tuple{Float64, Float64}; 
-        abstol = 1e-12, alg = Vern9(lazy = false), maxiters = 1e5, reltol = 1e-12, 
-        saveat = .0005, kwargs...
-    )
+function run_sirns(
+    u0::Vector{<:Real}, p::AbstractParameters, tspan::Tuple; 
+    abstol=1e-12, alg=Vern9(; lazy=false), maxiters=1e5, reltol=1e-12, saveat=0.0005, 
+    kwargs...
+)
     prob = ODEProblem(sirns!, u0, tspan, p)
     sol = solve(prob, alg; abstol, maxiters, reltol, saveat, kwargs...)
     return sol
@@ -134,7 +113,7 @@ Inputs can be values for all compartments or just for `S0` and `I0`. If only `S0
 * `t0 = 0` to set the start time for the model so that initial values of `β` are calculated 
     correctly.
 """
-function sirns_u0(S0::S, I0::S; p, equalrs = false, kwargs...) where S
+function sirns_u0(S0::S, I0::S; p, equalrs=false, kwargs...) where S
     Rtotal = 1 - (S0 + I0)
     if equalrs 
         rs = Rtotal / 3
@@ -151,7 +130,7 @@ function sirns_u0(S0::S, I0, R1, R2, R3; p, t0 = 0) where S
     for (i, v) ∈ enumerate([ S0, I0, R1, R2, R3 ]) u0[i] = v end  
     u0[6] = cos(2π * t0 - p.ϕ)  # x1 
     u0[7] = sin(2π * t0 - p.ϕ)  # x2
-    u0[8] = zero(S)               # cumulative cases
+    u0[8] = zero(S)  # cumulative cases
     return u0
 end 
 
@@ -173,17 +152,17 @@ Return vectors of compartment sizes from the ODE solver outputs.
     all `t ≥ 0`.
 """
 function modelcompartments(sol, p::T) where T <: Union{<:AbstractParameters, <:NamedTuple}
-    inds    = compartmentinds(sol)
-    gt      = sol.t[inds]
-    S       = modelcompartments(sol, 1, inds)
-    I       = modelcompartments(sol, 2, inds)
-    R1      = modelcompartments(sol, 3, inds)
-    R2      = modelcompartments(sol, 4, inds)
-    R3      = modelcompartments(sol, 5, inds)
-    Rtotal  = @. R1 + R2 + R3
-    β       = p.β0 .* (1 .+ p.β1 .* modelcompartments(sol, 6, inds))
-    cc      = modelcompartments(sol, 8, inds)
-    λ       = β .* I
+    inds = compartmentinds(sol)
+    gt = sol.t[inds]
+    S = modelcompartments(sol, 1, inds)
+    I = modelcompartments(sol, 2, inds)
+    R1 = modelcompartments(sol, 3, inds)
+    R2 = modelcompartments(sol, 4, inds)
+    R3 = modelcompartments(sol, 5, inds)
+    Rtotal = @. R1 + R2 + R3
+    β = p.β0 .* (1 .+ p.β1 .* modelcompartments(sol, 6, inds))
+    cc = modelcompartments(sol, 8, inds)
+    λ = β .* I
     return @dict gt S I R1 R2 R3 Rtotal cc β λ
 end 
 
@@ -197,8 +176,8 @@ function modelcompartments(sol, c::Symbol, inds)
     return modelcompartments(sol, i, inds)
 end
 
-modelcompartments(sol, i::Int, inds) = [ sol.u[j][i] for j ∈ inds ]
-modelcompartments(sol, v::Vector{<:Integer}, inds) = [ sum(sol.u[j][v]) for j ∈ inds ]
+modelcompartments(sol, i::Int, inds) = [sol.u[j][i] for j ∈ inds]
+modelcompartments(sol, v::Vector{<:Integer}, inds) = [sum(sol.u[j][v]) for j ∈ inds]
 
 function compartmentinds(sol)
     _gt = sol.t
@@ -245,7 +224,7 @@ end
 
 function modelincidence(
     p::AbstractParameters; 
-    equalrs=true, I0=0.001, S0=0.5, tspan=( -1000.0, 10.0 )   
+    equalrs=true, I0=0.001, S0=0.5, tspan=(-1000.0, 10.0)   
 )
     u0 = sirns_u0(S0, I0; equalrs, p)
     sol = run_sirns(u0, p, tspan)
@@ -271,7 +250,7 @@ Function to calculate model incidence using `DrWatson.produce_or_load`.
 """
 function pl_modelincidence(config::Dict{Symbol, <:Any})
     @unpack β0, β1, ϕ, γ, μ, ψ, ω, kw = config
-    result = modelincidence(SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω); kw...)
+    result = modelincidence(SirnsParameters(; β0, β1, ϕ, γ, μ, ψ, ω); kw...)
     return tostringdict(result)
 end
 

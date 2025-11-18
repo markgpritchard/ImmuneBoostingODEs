@@ -2,7 +2,10 @@
 
 using DrWatson
 @quickactivate :ImmuneBoostingODEs
-using CairoMakie, MakieTeX, PlotFormatting, Turing
+
+using CairoMakie
+using Turing
+
 CairoMakie.activate!()  # allows figures to be saved as vector files
 
 include("immuneduration.jl") 
@@ -29,7 +32,7 @@ include("rsvfitpriors.jl")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 introplot = let 
-    fig = Figure(; size=( 400, 100 ))
+    fig = Figure(; size=(400, 100))
     lt1 = LTeX(
         fig[1, 1], 
         TeXDocument(read(scriptsdir("tikz_sirrrs.tex"), String)); 

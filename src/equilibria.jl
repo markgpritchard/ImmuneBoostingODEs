@@ -15,7 +15,7 @@ Will return endemic equilibrium if able and disease-free equilibrium otherwise.
 Function checks that the compartments sum to 1. If the difference from 1 is greater 
     than `warntol` a warning is displayed.
 """
-function equil(p; warntol = 1e-10)
+function equil(p; warntol=1e-10)
     u = zeros(5)
     I = equili(p)
     _equil!(u, I, p)
@@ -24,8 +24,10 @@ function equil(p; warntol = 1e-10)
 end 
 
 function _equil!(u, I, p)
-    if 0 < I <= 1 _endemicequil!(u, I, p)   # endemic equilibrium
-    else          u[1] = 1.                 # disease-free equilibium  
+    if 0 < I <= 1  # endemic equilibrium
+        _endemicequil!(u, I, p)   
+    else  # disease-free equilibium            
+        u[1] = 1.                 
     end 
 end 
 
@@ -61,8 +63,10 @@ equils(p) = equils(p.β0, p.γ, p.μ)
 
 function equils(β0, γ, μ) 
     S = _equils(β0, γ, μ) 
-    if S > 1 return one(S) 
-    else     return S 
+    if S > 1 
+        return one(S) 
+    else     
+        return S 
     end 
 end 
 
@@ -84,8 +88,8 @@ function equili(p)
     if s1 * s2 < 0 
         Z = ZeroProblem(equiliproblem, ( 0, 1 ))
         return solve(Z, p)
-    else # s1 and s2 are the same sign then I* ∉ [0, 1] so no endemic equilibrium
-        return .0 
+    else  # s1 and s2 are the same sign then I* ∉ [0, 1] so no endemic equilibrium
+        return 0.0 
     end
 end 
 
@@ -124,7 +128,7 @@ Calculate the total proportion in the resistant subcompartments at endemic equil
 
 This function may return values >0 even if there is no endemic equilibrium.
 """
-equilr(p, I) = sum([ equilri(p, I, i) for i ∈ 1:3 ])
+equilr(p, I) = sum([equilri(p, I, i) for i ∈ 1:3])
 
 ## equiliproblem (not exported)
 # When x is the equilibium proportion infectious for parameters `p` then this function 
@@ -143,7 +147,7 @@ Calculate eigenvalues of the Jacobian at equilibium.
 
 `sortby` orders the output to aid plotting results. `warntol` is passed to `equil`.
 """
-function equileigen(p; sortby = λ -> (real(λ),imag(λ)), warntol = 1e-10)
+function equileigen(p; sortby=(λ -> (real(λ), imag(λ))), warntol=1e-10)
     u = equil(p; warntol)
     J = modeljacobian(p, u)
     return eigen(J; sortby).values 
@@ -206,7 +210,7 @@ All keyword arguments are passed to `equileigen`.
 function maxequileigen(p; kwargs...)
     eigens = equileigen(p; kwargs...)
     re = real.(eigens)
-    ind = findmax(re)[2] # findmax returns a tuple of the maximum value and its index
+    ind = findmax(re)[2]  # findmax returns a tuple of the maximum value and its index
     return eigens[ind]
 end 
 
@@ -222,7 +226,7 @@ All keyword arguments except `n` are passed to `maxequileigen`.
 realmaxequileigen(p; kwargs...) = real(maxequileigen(p; kwargs...))
 
 function realmaxequileigen(β, γ, μ, ψ, ω; kwargs...)
-    p = SirnsParameters(β, γ, μ, ψ, ω)
+    p = SirnsParameters(; β0=β, γ, μ, ψ, ω)
     return realmaxequileigen(p; kwargs...)
 end
 #=
@@ -294,13 +298,15 @@ function findpsivector(psivector, β, γ, μ, ω)
     return _findpsivector(ind, psivector)
 end
 
-function _findpsivector(ind, psivector)
-    if ind == 1 lower = 0. 
-    else        lower = psivector[ind-1]
+function _findpsivector(ind, psivector::AbstractVector{T}) where T
+    if ind == 1 
+        lower = zero(T) 
+    else        
+        lower = psivector[ind-1]
     end
     upper = psivector[ind]
     diff = upper - lower 
-    return collect(lower:diff/10:upper)
+    return collect(lower:(diff / 10):upper)
 end
 #=
 function eigentracks(β, γ, μ, psis, ω)
@@ -340,6 +346,7 @@ function _bifurcationlimits!(mins, maxs, β, γ, μ, psis, ω; kwargs...)
         mins[i] = mn
         maxs[i] = mx
     end 
+    return nothing
 end
 
 """
@@ -359,10 +366,8 @@ Default `tspan` for simulation is `( -1000., 10. )`. Maximum and minimum values 
 * `S0 = .7`: Simulation initial proportion susceptible
 * `I0 = .1`: Simulation initial proportion infectious
 """
-function bifurcationlimit(β, γ, μ, ψ, ω; 
-        maxiters = 1e5, tspan = ( -1000., 10. ), S0 = .7, I0 = .1
-    )
-    p = SirnsParameters(β, γ, μ, ψ, ω)
+function bifurcationlimit(β, γ, μ, ψ, ω; maxiters=1e5, tspan=(-100, 10), S0=0.7, I0=0.1,)
+    p = SirnsParameters(; β0=β, γ, μ, ψ, ω)
     u0 = sirns_u0(S0, I0; p, equalrs = true)
     sol = run_sirns(u0, p, tspan; maxiters)
     I = modelcompartments(sol, 2)
@@ -386,11 +391,11 @@ Runs function `bifurcationlimits` in `DrWatson.produce_or_load`
 """
 function pl_bifurcationlimits(config)
     if haskey(config, :maxiters)
-        @unpack R0, γ, μ, psis, ω, maxiters = config
+        @unpack maxiters = config
     else 
-        @unpack R0, γ, μ, psis, ω = config
         maxiters = 1e5 
     end
-    minmax = bifurcationlimits(R0, γ, μ, psis, ω; maxiters) # returns an ntuple
+    @unpack R0, γ, μ, psis, ω = config
+    minmax = bifurcationlimits(R0, γ, μ, psis, ω; maxiters)  # returns an ntuple
     return ntuple2dict(minmax)
 end

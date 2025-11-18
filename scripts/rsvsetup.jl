@@ -1,7 +1,6 @@
 
 # This script is called by `rsvanalysis.jl` and `displayrsvanalysis.jl`
 
-
 # RSV data from Scotland
 data = processrsvdata("respiratory_scot.csv", "rsv.csv")
 
@@ -36,7 +35,7 @@ end
 ## Times to save simulations
 saveat = let 
     savefirst = data.Date[1] - 7 / 365  # to allow calculation of new cases in first week
-    [ [ savefirst ]; data.Date ]
+    [[savefirst]; data.Date]
 end
 
 ## Callbacks  

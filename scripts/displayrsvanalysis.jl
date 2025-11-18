@@ -2,7 +2,11 @@
 using DrWatson
 @quickactivate :ImmuneBoostingODEs
 
-using CairoMakie, DataFrames, DifferentialEquations, Pigeons, Random, Turing
+using CairoMakie
+using DataFrames
+using DifferentialEquations
+using Random
+using Turing
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Load the data 
@@ -23,7 +27,7 @@ end
 
 rsvparameters01 = loadrsvdata(0.1) 
 plotchains(rsvparameters01)
-filter!(:chain => x -> x ∈ [ 2, 4, 5 ], rsvparameters01)
+#filter!(:chain => x -> x ∈ [ 2, 4, 5 ], rsvparameters01)
 plotchains(rsvparameters01)
 plotvals01 = fittedsimulationquantiles(rsvparameters01, 0.1, saveat, cbs)
 R0_01 = let 

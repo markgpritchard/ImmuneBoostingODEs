@@ -1,5 +1,5 @@
 
-function surfacegrid!(ax, xs, ys, zs; nsamples = 20, linewidth = .25, rasterize = 20, kwargs...)
+function surfacegrid!(ax, xs, ys, zs; nsamples=20, linewidth=0.25, rasterize=20, kwargs...)
     xind = surfacegrid_samples(xs, nsamples)
     yind = surfacegrid_samples(ys, nsamples)
 
@@ -17,7 +17,7 @@ end
 
 function surfacegrid_samples(vals, nsamples) 
     valslength = length(vals)
-    inds = [ round(Int, (i - 1) * (valslength - 1) / (nsamples - 1) + 1) for i in 1:nsamples ]
+    inds = [round(Int, (i - 1) * (valslength - 1) / (nsamples - 1) + 1) for i in 1:nsamples]
     return inds
 end 
 
@@ -31,9 +31,10 @@ function plotequilibriumsurface!(ax::Axis3, betas, phis, Is; kwargs...)
     surfacegrid!(ax, betas, phis, Is; kwargs...)
 end 
 
-function labelequilibriumsurface!(ax::Axis3, labels::Vector{<:AbstractString}; 
-        xlaboffset = 20, ylaboffset = 20, zlaboffset = 70, zlabrotation = 3π / 2
-    )
+function labelequilibriumsurface!(
+    ax::Axis3, labels::Vector{<:AbstractString}; 
+    xlaboffset=20, ylaboffset=20, zlaboffset=70, zlabrotation=(3π / 2),
+)
     ax.xlabel = labels[1]
     ax.ylabel = labels[2]
     ax.zlabel = labels[3]
