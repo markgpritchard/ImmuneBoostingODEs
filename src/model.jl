@@ -1,7 +1,7 @@
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Parameters 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 abstract type AbstractParameters end
 
@@ -47,8 +47,9 @@ struct SirnsParameters{T, U, V, W, X} <: AbstractParameters
     ) where {T, U, V, W, X}
         # internal function without checks on parameters that have already been checked
         newbetareduction = exp(log(βreduction) * p.βreductionfactor)
-
-        return new{T, U, V, W, typeof(newbetareduction)}(p.β0, p.β1, p.ϕ, p.γ, p.μ, p.ψ, p.ω, p.βreductionfactor, βreduction)
+        return new{T, U, V, W, typeof(newbetareduction)}(
+            p.β0, p.β1, p.ϕ, p.γ, p.μ, p.ψ, p.ω, p.βreductionfactor, newbetareduction
+        )
     end
 end 
 

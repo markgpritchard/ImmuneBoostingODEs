@@ -5,7 +5,8 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # NB assuming 28 days in February
-const MONTHDAYS = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+const MONTHDAYS = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]  # not exported
+_monthdays(m) = MONTHDAYS[m]
 
 const SCOTLANDREGIONS = [  # not exported
     "Aberdeen City", 
@@ -42,6 +43,28 @@ const SCOTLANDREGIONS = [  # not exported
     "West Lothian", 
 ]
 
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Datasets
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function processdata(f, processedfilename, rawfilenames...)
+    if isfile(datadir("exp_pro", processedfilename))
+        data = CSV.read(datadir("exp_pro", processedfilename), DataFrame)
+    else 
+        if isfile(datadir("exp_raw", processedfilename))
+            # there is no `processedfilename` to save the data at 
+            return f(processedfilename, rawfilenames...)
+        end
+        
+        data = f(rawfilenames...)
+        CSV.write(datadir("exp_pro", processedfilename), data)
+    end 
+    return data
+end
+
+## RSV data
+
 """
     processagedata(rawfilename[, processedfilename])
 
@@ -53,14 +76,20 @@ If `processedfilename` is supplied and is a file in the `exp_pro` folder, this w
 
 Variables should be strings of filenames, including `.csv` at the end.
 """
-function processagedata(filename)
-    data = CSV.read(filename, DataFrame)
+processagedata(filename) = _processagedata(filename)
+
+function processagedata(processedfilename, rawfilename)
+    return processdata(_processagedata, processedfilename, rawfilename)
+end
+
+function _processagedata(filename)
+    data = CSV.read(datadir("exp_raw", filename), DataFrame)
 
     # Select rows that describe respiratory syncytial virus
     subset!(data, :Pathogen => x -> x .== "Respiratory syncytial virus")
 
     # Convert dates to a proportion of the year 
-    processcsvdates!(data, :WeekBeginning)
+    _processcsvdates!(data, :WeekBeginning)
 
     # Set dates to start in April
     insertcols!(data, :Offsetdate => data.Date .- (MONTHDAYS[4] / 365))
@@ -89,10 +118,6 @@ function processagedata(filename)
     return data 
 end
 
-function processagedata(rawfilename, processedfilename)
-    return processdata(processagedata, rawfilename, processedfilename)
-end
-
 """
     processrsvdata(rawfilename[, processedfilename])
 
@@ -104,14 +129,20 @@ If `processedfilename` is supplied and is a file in the `exp_pro` folder, this w
 
 Variables should be strings of filenames, including `.csv` at the end.
 """
-function processrsvdata(filename)
-    data = CSV.read(filename, DataFrame)
+processrsvdata(filename) = _processrsvdata(filename)
+
+function processrsvdata(processedfilename, rawfilename)
+    return processdata(_processrsvdata, processedfilename, rawfilename)
+end
+
+function _processrsvdata(filename)
+    data = CSV.read(datadir("exp_raw", filename), DataFrame)
 
     # Select the rows that describe respiratory syncytial virus
     subset!(data, :Pathogen => x -> x .== "Respiratory syncytial virus")
 
     # Convert the dates to a proportion of the year 
-    processcsvdates!(data, :WeekBeginning)
+    _processcsvdates!(data, :WeekBeginning)
 
     # Rename cases
     rename!(data, :NumberCasesPerWeek => :Cases)
@@ -122,9 +153,8 @@ function processrsvdata(filename)
     return data 
 end 
 
-function processrsvdata(rawfilename, processedfilename)
-    return processdata(processrsvdata, rawfilename, processedfilename)
-end
+
+## Oxford Covid-19 Government Response Tracker data
 
 """
     processrsvdata(rawfilename[, processedfilename])
@@ -137,7 +167,13 @@ If `processedfilename` is supplied and is a file in the `exp_pro` folder, this w
 
 Variables should be strings of filenames, including `.csv` at the end.
 """
-function processcrgtvdata(filename)
+processcrgtvdata(filename) = _processcrgtvdata(filename)
+
+function processcrgtvdata(processedfilename, rawfilename)
+    return processdata(_processcrgtvdata, processedfilename, rawfilename)
+end
+
+function _processcrgtvdata(filename)
     data = CSV.read(filename, DataFrame)
 
     # Select rows describing Scotland 
@@ -147,52 +183,19 @@ function processcrgtvdata(filename)
     rename!(data, :Date => :RawDate)
 
     # Convert the dates to a proportion of the year 
-    processcsvdates!(data, :RawDate)
+    _processcsvdates!(data, :RawDate)
 
     return data 
 end 
 
-function processcrgtvdata(rawfilename, processedfilename)
-    return processdata(processcrgtvdata, rawfilename, processedfilename)
+
+## Google mobility data 
+
+function processmobilitydata(processedfilename, rawfilenames...)
+    return processdata(_processmobilitydata, processedfilename, rawfilenames...)
 end
 
-function processcsvdates!(df, datecolumn)
-    startdates = getproperty(df, datecolumn)
-    years = @. round(Int, startdates / 10000, RoundDown)
-    months = @. round(Int, (startdates - years * 10000) / 100, RoundDown)
-    days = @. startdates - years * 10000 - months * 100
-    yeardays = @. MONTHDAYS[months] + days
-    dates = @. years + yeardays / 365
-    insertcols!(df, :Date => dates)
-
-    # Days since 3 October 2016 (the first day in the RSV dataset)
-    datadays = @. round(Int, 365 * (years - 2016.76) + yeardays)
-
-    # Call this :gt for consistency with the model outputs 
-    insertcols!(df, :gt => datadays)
-end
-
-function processdata(func, rawfilename, processedfilename)
-    if isfile(datadir("exp_pro", processedfilename))
-        data = CSV.read(datadir("exp_pro", processedfilename), DataFrame)
-    else 
-        data = func(datadir("exp_raw", rawfilename))
-        CSV.write(datadir("exp_pro", processedfilename), data)
-    end 
-    return data
-end
-
-function printrawdate(rawdate::Int)
-    stringdate = "$rawdate"
-    printrawdate(stringdate)
-end 
-
-printrawdate(stringdate::String) = "$(stringdate[7:8])/$(stringdate[5:6])/$(stringdate[1:4])"
-
-_elementwisebetareduction(::Missing) = missing 
-_elementwisebetareduction(x::Int) = (100 + x) / 100
-
-function processmobilitydata(filenames...)
+function _processmobilitydata(filenames...)
     mobilitydata = CSV.read(datadir("exp_raw", filenames[1]), DataFrame)
 
     for (i, name) in enumerate(filenames) 
@@ -211,10 +214,7 @@ function processmobilitydata(filenames...)
     )
 
     # areas of Scotland 
-    filter!( 
-        :sub_region_1 => x -> !ismissing(x) && x in SCOTLANDREGIONS,
-        mobilitydata
-    )
+    filter!( :sub_region_1 => x -> !ismissing(x) && x in SCOTLANDREGIONS, mobilitydata)
 
     mobilitydata.workplaces_percent_change_from_baseline .= 
         _elementwisebetareduction.(mobilitydata.workplaces_percent_change_from_baseline)
@@ -231,32 +231,54 @@ function processmobilitydata(filenames...)
     insertcols!(
         combinedmobilitydata,
         :betareduction => [
-            (
-                tdf = filter(:date => x -> x == combinedmobilitydata.date[i], mobilitydata);
-                mean(
-                    skipmissing(
-                        [
-                            tdf.workplaces_percent_change_from_baseline; 
-                            tdf.transit_stations_percent_change_from_baseline; 
-                            tdf.retail_and_recreation_percent_change_from_baseline
-                        ]
-                    )
-                )
-            )
+            _meanmobilityvalues(combinedmobilitydata, mobilitydata, i) 
             for i in axes(combinedmobilitydata, 1)
         ],
-        :fractiondate => [
-            (
-                yr = year(combinedmobilitydata.date[i]);
-                mth = month(combinedmobilitydata.date[i]);
-                d = day(combinedmobilitydata.date[i]);
-                yd = MONTHDAYS[mth] + d;
-                yr + yd / 365
-            )
-            for i in axes(combinedmobilitydata, 1)
-        ]
+        :fractiondate => _fractiondate.(combinedmobilitydata.date)
     )
     return combinedmobilitydata
 end
 
+_elementwisebetareduction(::Missing) = missing 
+_elementwisebetareduction(x::Int) = (100 + x) / 100
 
+function _meanmobilityvalues(combinedmobilitydata, mobilitydata, i)
+    tdf = filter(:date => x -> x == combinedmobilitydata.date[i], mobilitydata)
+    return mean(skipmissing([
+        tdf.workplaces_percent_change_from_baseline; 
+        tdf.transit_stations_percent_change_from_baseline; 
+        tdf.retail_and_recreation_percent_change_from_baseline
+    ]))
+end
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Auxiliary functions
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function _processcsvdates!(df, datecolumn)
+    startdates = getproperty(df, datecolumn)
+    years = @. round(Int, startdates / 10000, RoundDown)
+    months = @. round(Int, (startdates - years * 10000) / 100, RoundDown)
+    days = @. startdates - years * 10000 - months * 100
+    yeardays = @. MONTHDAYS[months] + days
+    dates = @. years + yeardays / 365
+    insertcols!(df, :Date => dates)
+
+    # Days since 3 October 2016 (the first day in the RSV dataset)
+    datadays = @. round(Int, 365 * (years - 2016.76) + yeardays)
+
+    # Call this :gt for consistency with the model outputs 
+    insertcols!(df, :gt => datadays)
+end
+
+function _fractiondate(date)
+    yr = year(date);
+    mth = month(date);
+    d = day(date);
+    yd = _monthdays(mth) + d;
+    return yr + yd / 365
+end
+
+printrawdate(rawdate::Int) = printrawdate("$rawdate")
+printrawdate(stringdate::String) = "$(stringdate[7:8])/$(stringdate[5:6])/$(stringdate[1:4])"

@@ -33,7 +33,7 @@ include("plotting.jl")
 ## structs.jl 
 export SirnsParameters, LambdaParms
 ## consts.jl"
-export COLOURVECTOR, COLOUR_I, COLOUR_R, COLOUR_S, MONTHDAYS
+export COLOURVECTOR, COLOUR_I, COLOUR_R, COLOUR_S
 ## processdata.jl
 export printrawdate, processagedata, processcrgtvdata, processmobilitydata, processrsvdata
 ## equilibria.jl

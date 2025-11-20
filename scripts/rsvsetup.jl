@@ -2,16 +2,17 @@
 # This script is called by `rsvanalysis.jl` and `displayrsvanalysis.jl`
 
 # RSV data from Scotland
-data = processrsvdata("respiratory_scot.csv", "rsv.csv")
+data = processrsvdata("rsv.csv", "respiratory_scot.csv")
 
 # Age-specific data
-agedata = processagedata("respiratory_age.csv", "rsv_age.csv")
+agedata = processagedata("rsv_age.csv", "respiratory_age.csv")
 
 # Data from Oxford Covid-19 Government Response Tracker
-crgtdata = processcrgtvdata("OxCGRT_compact_subnational_v1.csv", "crgt.csv")
+crgtdata = processcrgtvdata("crgt.csv", "OxCGRT_compact_subnational_v1.csv")
 
 # Google mobility data (as a const as it is called by ODE callbacks)
 const MOBILITYDATA = processmobilitydata(
+    "mobility.csv",
     "2020_GB_Region_Mobility_Report.csv",
     "2021_GB_Region_Mobility_Report.csv",
     "2022_GB_Region_Mobility_Report.csv",
@@ -19,7 +20,7 @@ const MOBILITYDATA = processmobilitydata(
 
 # To avoid splitting outbreaks, count cases from April each year 
 let 
-    april1value = MONTHDAYS[4] / 365
+    april1value = 90 / 365  # NB assuming 28 days in February
     offsetdate = data.Date .- april1value
     aprilyear = round.(Int, offsetdate, RoundDown)
     aprilfractiondate = offsetdate - aprilyear
@@ -28,6 +29,7 @@ let
     # insert cumulative cases since last April 
     cumulativecases = Vector{Float64}(undef, size(data, 1))
     cumulativecases[1] = data.Cases[1]
+
     for i ∈ axes(data, 1)
         i == 1 && continue
         if data.AprilYear[i] == data.AprilYear[i-1]
@@ -36,6 +38,7 @@ let
             cumulativecases[i] = data.Cases[i]
         end 
     end 
+
     insertcols!(data, :AprilCumulativeCases => cumulativecases)
 end 
 

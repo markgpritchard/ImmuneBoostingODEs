@@ -105,7 +105,13 @@ predictionarray = Array(predictions)
 predictionquantiles = zeros(length(data.Cases), 7)
 size(predictionarray, 2) == size(predictionquantiles, 1)
 for i in axes(predictionquantiles, 1)
-    predictionquantiles[i, :] .= max.(0, quantile(skipmissing(predictionarray[:, i]), [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]))
+    predictionquantiles[i, :] .= max.(
+        0, 
+        quantile(
+            skipmissing(predictionarray[:, i]), 
+            [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
+        )
+    )
 end
 
 fig = let 
