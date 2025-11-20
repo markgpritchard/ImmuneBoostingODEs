@@ -3,8 +3,6 @@ using DrWatson
 #@quickactivate "ImmuneBoostingODEs"
 @quickactivate :ImmuneBoostingODEs
 
-import AbstractPPL
-
 using CairoMakie
 using DataFrames
 using DifferentialEquations
@@ -35,7 +33,12 @@ predictionarray = Array(predictions)
 predictionquantiles = zeros(length(data.Cases), 7)
 size(predictionarray, 2) == size(predictionquantiles, 1)
 for i in axes(predictionquantiles, 1)
-    predictionquantiles[i, :] .= max.(0, quantile(skipmissing(predictionarray[:, i]), [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]))
+    predictionquantiles[i, :] .= max.(
+        0, 
+        quantile(
+            skipmissing(predictionarray[:, i]), [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
+        )
+    )
 end
 
 fig = let 
@@ -50,30 +53,8 @@ fig = let
     fig
 end
 
-# ranges for optimization of parameters 
-lowerbounds = log.([4.87, 1e-10, 1e-10, 0.2, 0.1, 1e-5, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10])
-upperbounds = log.([487, 1 - 1e-10, 2π, 5, 10, 0.2, 1, 10, 10, 10, 10])
-
+initial_params_psi0 = initialparams_map(model_psi0, 4; maxiters=10,)
 #=
-InitFromParams(
-    (
-        β0=0.1, 
-        β1=0.1, 
-        ϕ=0.1, 
-        ω=0.1, 
-        βreductionfactor=0.1, 
-        detection=0.1, 
-        minsigma2=0.1, 
-        S0=0.1, 
-        I0=0.1, 
-        R1=0.1, 
-        R2=0.1,
-    )
-)
-=#
-
-initial_params_psi0 = Vector{InitFromParams{Dict{AbstractPPL.VarName, Any}, InitFromPrior}}(undef, 4)
-
 paramnames = (:β0, :β1, :ϕ, :ω, :βreductionfactor, :detection, :minsigma2, :S0, :I0, :R1, :R2)
 Threads.@threads for k in 1:4 
     ip = [rand(Uniform(lowerbounds[i], upperbounds[i])) for i in eachindex(lowerbounds)]
@@ -96,6 +77,8 @@ Threads.@threads for k in 1:4
     initial_params_psi0[k] = InitFromParams(namedtup)
     @info "initial_params[$k] ($(ipf.retcode)) = $(initial_params_psi0[k])"
 end
+
+=#
 
 #=
 # which is a vector containing the log of the following parameters in order:

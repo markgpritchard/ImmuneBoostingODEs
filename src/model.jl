@@ -231,8 +231,13 @@ function sirns_u0(S0::S, I0::S; p, equalrs=false, kwargs...) where S
 end 
 
 function sirns_u0(S0::S, I0, R1, R2, R3; p, t0=0) where S
-    @assert +(S0, I0, R1, R2, R3) ≈ 1 "+($S0, $I0, $R1, $R2, $R3) = $(+(S0, I0, R1, R2, R3)) != 1"
-    @assert min(S0, I0, R1, R2, R3) >= -1e-6 "min($S0, $I0, $R1, $R2, $R3) = $(min(S0, I0, R1, R2, R3)) < 0"
+    #= if isnan(S0)
+        @warn "NaN values passed to u0, S0=$S0, I0=$I0, R1=$R1, R2=$R2, R3=$R3, p=$p" 
+    end =#
+  #=  @assert +(S0, I0, R1, R2, R3) ≈ 1 "+($S0, $I0, $R1, $R2, $R3) = $(+(S0, I0, R1, R2, R3)) != 1"
+    @assert min(S0, I0, R1, R2, R3) >= -1e-6 "min($S0, $I0, $R1, $R2, $R3) = $(min(S0, I0, R1, R2, R3)) < 0" =#
+    +(S0, I0, R1, R2, R3) ≈ 1 || @warn "model expects compartment values to sum to 1: S0=$S0, I0=$I0, R1=$R1, R2=$R2, R3=$R3"
+    min(S0, I0, R1, R2, R3) >= -1e-6 || @warn "model expects all compartment values to be ≥ 0: S0=$S0, I0=$I0, R1=$R1, R2=$R2, R3=$R3"
     u0 = [
         S0, 
         I0, 

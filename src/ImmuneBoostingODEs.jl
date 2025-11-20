@@ -3,9 +3,6 @@ module ImmuneBoostingODEs
 
 import CSV
 import NaNMath
-import Optim
-import Optimization
-import Zygote
 
 using CairoMakie: @L_str, Axis, Axis3, Figure, GridLayout, Label, RGBf, lines!, surface!
 using DataFrames: DataFrame, insertcols!, leftjoin!, rename!, select!, subset, subset!
@@ -14,12 +11,15 @@ using DifferentialEquations: ODEProblem, Vern9, solve
 using DrWatson: @dict, @ntuple, @unpack
 using DrWatson: datadir, load, ntuple2dict, produce_or_load, tostringdict
 using FFTW: fft
+using LineSearches: Static
 using LinearAlgebra: eigen
+using Optim: LBFGS
 using Roots: ZeroProblem
 using SciMLBase: successful_retcode
 using StatsBase: mean, quantile, std
 using Turing: @addlogprob!, @model
-using Turing: Beta, Exponential, LogNormal, Normal, Uniform, arraydist, pdf
+using Turing: Beta, Exponential, InitFromParams, InitFromPrior, LogNormal, Normal, Uniform
+using Turing: arraydist, maximum_a_posteriori, maximum_likelihood, pdf, truncated
 
 include("consts.jl")
 include("processdata.jl")
@@ -52,7 +52,7 @@ export run_sirns
 export sirns!
 export sirns_u0
 ## rsvfitmodel.jl
-export fitmodel, optimizesirns
+export fitmodel, initialparams_map, initialparams_mle
 ## analysedata.jl
 export fittedsimulationquantiles 
 export fittedsimulationsetup
