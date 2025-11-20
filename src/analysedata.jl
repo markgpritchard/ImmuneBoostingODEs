@@ -75,10 +75,10 @@ end
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Parameter fitting 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
+#=
 memosolver(prob; kwargs...) = @memoize solve(prob; kwargs...)
 memosolver(prob, alg; kwargs...) = @memoize solve(prob, alg; kwargs...)
-
+=#
 function loadrsvdata(omega; ids=1:5, maxrounds=12,)
     df = DataFrame(
         :iteration => Int[ ],
@@ -109,10 +109,9 @@ function loadrsvdata(omega; ids=1:5, maxrounds=12,)
     return df
 end
 
-function fittedsimulationsetup(saveat)
-    p = SirnsParameters(50.0, 0.1, 0.0, 48.7, 0.0087, 0.0, 2.0, 50.0, 50.0, 50.0) 
-    u0 = sirns_u0(0.01, 2e-5; p, equalrs=true, t0=1996.737)
-    tspan = ( 1996.737, last(saveat) )
+function fittedsimulationsetup(saveat; tspan=(2005.737, last(saveat)))
+    p = SirnsParameters(; β0=50.0, β1=0.1, ϕ=0, γ=48.7, μ=0.0087, ψ=0, ω=2) 
+    u0 = sirns_u0(0.01, 2e-5; p, equalrs=true, t0=tspan[1])
     ODEProblem(sirns!, u0, tspan, p)
 end
 

@@ -3,6 +3,41 @@
 # Process csv data 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+const SCOTLANDREGIONS = [  # not exported
+    "Aberdeen City", 
+    "Aberdeenshire", 
+    "Angus Council", 
+    "Argyll and Bute Council", 
+    "Clackmannanshire", 
+    "Dumfries and Galloway", 
+    "Dundee City Council", 
+    "East Ayrshire Council", 
+    "East Dunbartonshire Council", 
+    "East Lothian Council", 
+    "East Renfrewshire Council", 
+    "Edinburgh", 
+    "Falkirk", 
+    "Fife", 
+    "Glasgow City",  
+    "Highland Council", 
+    "Inverclyde", 
+    "Midlothian", 
+    "Moray", 
+    "Na h-Eileanan an Iar", 
+    "North Ayrshire Council", 
+    "North Lanarkshire",  
+    "Orkney", 
+    "Perth and Kinross", 
+    "Renfrewshire", 
+    "Scottish Borders", 
+    "Shetland Islands", 
+    "South Ayrshire Council", 
+    "South Lanarkshire",  
+    "Stirling", 
+    "West Dunbartonshire Council", 
+    "West Lothian", 
+]
+
 """
     processagedata(rawfilename[, processedfilename])
 
@@ -149,3 +184,75 @@ function printrawdate(rawdate::Int)
 end 
 
 printrawdate(stringdate::String) = "$(stringdate[7:8])/$(stringdate[5:6])/$(stringdate[1:4])"
+
+_elementwisebetareduction(::Missing) = missing 
+_elementwisebetareduction(x::Int) = (100 + x) / 100
+
+function processmobilitydata(filenames...)
+    mobilitydata = CSV.read(datadir("exp_raw", filenames[1]), DataFrame)
+
+    for (i, name) in enumerate(filenames) 
+        i == 1 && continue 
+        md = CSV.read(datadir("exp_raw", name), DataFrame)
+        mobilitydata = vcat(mobilitydata, md)
+    end
+
+    select!(
+        mobilitydata, 
+        :date, 
+        :sub_region_1, 
+        :workplaces_percent_change_from_baseline,
+        :transit_stations_percent_change_from_baseline,
+        :retail_and_recreation_percent_change_from_baseline,
+    )
+
+    # areas of Scotland 
+    filter!( 
+        :sub_region_1 => x -> !ismissing(x) && x in SCOTLANDREGIONS,
+        mobilitydata
+    )
+
+    mobilitydata.workplaces_percent_change_from_baseline .= 
+        _elementwisebetareduction.(mobilitydata.workplaces_percent_change_from_baseline)
+    mobilitydata.transit_stations_percent_change_from_baseline .= 
+        _elementwisebetareduction.(
+            mobilitydata.transit_stations_percent_change_from_baseline
+        )
+    mobilitydata.retail_and_recreation_percent_change_from_baseline .= 
+        _elementwisebetareduction.(
+            mobilitydata.retail_and_recreation_percent_change_from_baseline
+        )
+
+    combinedmobilitydata = DataFrame(:date => unique(mobilitydata.date))
+    insertcols!(
+        combinedmobilitydata,
+        :betareduction => [
+            (
+                tdf = filter(:date => x -> x == combinedmobilitydata.date[i], mobilitydata);
+                mean(
+                    skipmissing(
+                        [
+                            tdf.workplaces_percent_change_from_baseline; 
+                            tdf.transit_stations_percent_change_from_baseline; 
+                            tdf.retail_and_recreation_percent_change_from_baseline
+                        ]
+                    )
+                )
+            )
+            for i in axes(combinedmobilitydata, 1)
+        ],
+        :fractiondate => [
+            (
+                yr = year(combinedmobilitydata.date[i]);
+                mth = month(combinedmobilitydata.date[i]);
+                d = day(combinedmobilitydata.date[i]);
+                yd = MONTHDAYS[mth] + d;
+                yr + yd / 365
+            )
+            for i in axes(combinedmobilitydata, 1)
+        ]
+    )
+    return combinedmobilitydata
+end
+
+

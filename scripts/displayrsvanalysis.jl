@@ -1,12 +1,16 @@
 
 using DrWatson
+#@quickactivate "ImmuneBoostingODEs"
 @quickactivate :ImmuneBoostingODEs
+
+import AbstractPPL
 
 using CairoMakie
 using DataFrames
 using DifferentialEquations
 using Random
 using Turing
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Load the data 
@@ -19,6 +23,253 @@ for y ∈ 2016:2022
     inds = findall(x -> y <= x < y + 1, data.AprilYear)
     println("    $(sum(data.Cases[inds])) cases in $y")
 end 
+
+prob = fittedsimulationsetup(saveat)
+
+model_psi0 = fitmodel(data.Cases, prob; callback=betareductioncallback, saveat, psi=0)
+priors_psi0 = sample(model_psi0, Prior(), MCMCThreads(), 1_000, 4)
+
+predmodel = fitmodel(missing, prob; callback=betareductioncallback, saveat, psi=0)
+predictions = predict(Random.default_rng(), predmodel, priors_psi0)
+predictionarray = Array(predictions)
+predictionquantiles = zeros(length(data.Cases), 7)
+size(predictionarray, 2) == size(predictionquantiles, 1)
+for i in axes(predictionquantiles, 1)
+    predictionquantiles[i, :] .= max.(0, quantile(skipmissing(predictionarray[:, i]), [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]))
+end
+
+fig = let 
+    fig = Figure()
+    axs = Axis(fig[1, 1])
+    band!(data.Date, predictionquantiles[:, 1], predictionquantiles[:, 7]; color=(COLOUR_I, 0.3),)
+    band!(data.Date, predictionquantiles[:, 2], predictionquantiles[:, 6]; color=(COLOUR_I, 0.5),)
+    band!(data.Date, predictionquantiles[:, 3], predictionquantiles[:, 5]; color=(COLOUR_I, 0.7),)
+    lines!(data.Date, predictionquantiles[:, 4]; color=COLOUR_I, linewidth=1,)
+    scatter!(data.Date, data.Cases; color=:black, marker=:x, markersize=3,)
+
+    fig
+end
+
+# ranges for optimization of parameters 
+lowerbounds = log.([4.87, 1e-10, 1e-10, 0.2, 0.1, 1e-5, 1e-10, 1e-10, 1e-10, 1e-10, 1e-10])
+upperbounds = log.([487, 1 - 1e-10, 2π, 5, 10, 0.2, 1, 10, 10, 10, 10])
+
+#=
+InitFromParams(
+    (
+        β0=0.1, 
+        β1=0.1, 
+        ϕ=0.1, 
+        ω=0.1, 
+        βreductionfactor=0.1, 
+        detection=0.1, 
+        minsigma2=0.1, 
+        S0=0.1, 
+        I0=0.1, 
+        R1=0.1, 
+        R2=0.1,
+    )
+)
+=#
+
+initial_params_psi0 = Vector{InitFromParams{Dict{AbstractPPL.VarName, Any}, InitFromPrior}}(undef, 4)
+
+paramnames = (:β0, :β1, :ϕ, :ω, :βreductionfactor, :detection, :minsigma2, :S0, :I0, :R1, :R2)
+Threads.@threads for k in 1:4 
+    ip = [rand(Uniform(lowerbounds[i], upperbounds[i])) for i in eachindex(lowerbounds)]
+    ipf = optimizesirns(
+        data.Cases, prob, ip;
+        callback=betareductioncallback,
+        saveat,  
+        lb=lowerbounds, 
+        ub=upperbounds, 
+        verbosity=0, 
+        psi=0,
+        optimizationsolvermaxiters=5000,  # to increase later
+    )
+    #initial_params_psi0[k] = exp.(ipf.minimizer)
+    paramvalues = Tuple(exp.(ipf.minimizer))
+    if paramvalues[3] > π 
+        paramvalues[3] += -2π 
+    end
+    namedtup = NamedTuple{paramnames}(paramvalues)
+    initial_params_psi0[k] = InitFromParams(namedtup)
+    @info "initial_params[$k] ($(ipf.retcode)) = $(initial_params_psi0[k])"
+end
+
+#=
+# which is a vector containing the log of the following parameters in order:
+        # β0 
+        # β1 
+        # ϕ 
+        # ω 
+        # βreductionfactor 
+        # detection 
+        # minsigma2 
+        # S0 
+        # I0 
+        # R1 
+        # R2
+        =#
+
+#maximum_a_posteriori(model_psi0)
+
+samples_psi0 = sample(model_psi0, NUTS(100, 0.65), MCMCThreads(), 100, 4; initial_params=initial_params_psi0)
+
+predmodel = fitmodel(missing, prob; callback=betareductioncallback, saveat, psi=0)
+predictions = predict(Random.default_rng(), predmodel, samples_psi0)
+predictionarray = Array(predictions)
+predictionquantiles = zeros(length(data.Cases), 7)
+size(predictionarray, 2) == size(predictionquantiles, 1)
+for i in axes(predictionquantiles, 1)
+    predictionquantiles[i, :] .= max.(0, quantile(skipmissing(predictionarray[:, i]), [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]))
+end
+
+fig = let 
+    fig = Figure()
+    axs = Axis(fig[1, 1])
+    band!(data.Date, predictionquantiles[:, 1], predictionquantiles[:, 7]; color=(COLOUR_I, 0.3),)
+    band!(data.Date, predictionquantiles[:, 2], predictionquantiles[:, 6]; color=(COLOUR_I, 0.5),)
+    band!(data.Date, predictionquantiles[:, 3], predictionquantiles[:, 5]; color=(COLOUR_I, 0.7),)
+    lines!(data.Date, predictionquantiles[:, 4]; color=COLOUR_I, linewidth=1,)
+    scatter!(data.Date, data.Cases; color=:black, marker=:x, markersize=3,)
+
+    fig
+end
+
+
+
+#
+
+model_psi05 = fitmodel(data.Cases, prob; callback=betareductioncallback, saveat, psi=0.5)
+priors_psi05 = sample(model_psi05, Prior(), MCMCThreads(), 1_000, 4)
+
+predmodel = fitmodel(missing, prob; callback=betareductioncallback, saveat, psi=0.5)
+predictions = predict(Random.default_rng(), predmodel, priors_psi05)
+predictionarray = Array(predictions)
+predictionquantiles = zeros(length(data.Cases), 7)
+size(predictionarray, 2) == size(predictionquantiles, 1)
+for i in axes(predictionquantiles, 1)
+    predictionquantiles[i, :] .= quantile(skipmissing(predictionarray[:, i]), [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975])
+end
+
+fig = let 
+    fig = Figure()
+    axs = Axis(fig[1, 1])
+    band!(data.Date, predictionquantiles[:, 1], predictionquantiles[:, 7]; color=(COLOUR_I, 0.3),)
+    band!(data.Date, predictionquantiles[:, 2], predictionquantiles[:, 6]; color=(COLOUR_I, 0.5),)
+    band!(data.Date, predictionquantiles[:, 3], predictionquantiles[:, 5]; color=(COLOUR_I, 0.7),)
+    lines!(data.Date, predictionquantiles[:, 4]; color=COLOUR_I, linewidth=1,)
+    scatter!(data.Date, data.Cases; color=:black, marker=:x, markersize=3,)
+
+    fig
+end
+
+model_psi1 = fitmodel(data.Cases, prob; callback=betareductioncallback, saveat, psi=1)
+priors_psi1 = sample(model_psi1, Prior(), MCMCThreads(), 1_000, 4)
+
+predmodel = fitmodel(missing, prob; callback=betareductioncallback, saveat, psi=1)
+predictions = predict(Random.default_rng(), predmodel, priors_psi1)
+predictionarray = Array(predictions)
+predictionquantiles = zeros(length(data.Cases), 7)
+size(predictionarray, 2) == size(predictionquantiles, 1)
+for i in axes(predictionquantiles, 1)
+    predictionquantiles[i, :] .= quantile(skipmissing(predictionarray[:, i]), [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975])
+end
+
+fig = let 
+    fig = Figure()
+    axs = Axis(fig[1, 1])
+    band!(data.Date, predictionquantiles[:, 1], predictionquantiles[:, 7]; color=(COLOUR_I, 0.3),)
+    band!(data.Date, predictionquantiles[:, 2], predictionquantiles[:, 6]; color=(COLOUR_I, 0.5),)
+    band!(data.Date, predictionquantiles[:, 3], predictionquantiles[:, 5]; color=(COLOUR_I, 0.7),)
+    lines!(data.Date, predictionquantiles[:, 4]; color=COLOUR_I, linewidth=1,)
+    scatter!(data.Date, data.Cases; color=:black, marker=:x, markersize=3,)
+
+    fig
+end
+
+model_psi5 = fitmodel(data.Cases, prob; callback=betareductioncallback, saveat, psi=5)
+priors_psi5 = sample(model_psi5, Prior(), MCMCThreads(), 1_000, 4)
+
+predmodel = fitmodel(missing, prob; callback=betareductioncallback, saveat, psi=5)
+predictions = predict(Random.default_rng(), predmodel, priors_psi5)
+predictionarray = Array(predictions)
+predictionquantiles = zeros(length(data.Cases), 7)
+size(predictionarray, 2) == size(predictionquantiles, 1)
+for i in axes(predictionquantiles, 1)
+    predictionquantiles[i, :] .= quantile(skipmissing(predictionarray[:, i]), [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975])
+end
+
+fig = let 
+    fig = Figure()
+    axs = Axis(fig[1, 1])
+    band!(data.Date, predictionquantiles[:, 1], predictionquantiles[:, 7]; color=(COLOUR_I, 0.3),)
+    band!(data.Date, predictionquantiles[:, 2], predictionquantiles[:, 6]; color=(COLOUR_I, 0.5),)
+    band!(data.Date, predictionquantiles[:, 3], predictionquantiles[:, 5]; color=(COLOUR_I, 0.7),)
+    lines!(data.Date, predictionquantiles[:, 4]; color=COLOUR_I, linewidth=1,)
+    scatter!(data.Date, data.Cases; color=:black, marker=:x, markersize=3,)
+
+    fig
+end
+
+model_psi10 = fitmodel(data.Cases, prob; callback=betareductioncallback, saveat, psi=10)
+priors_psi10 = sample(model_psi10, Prior(), MCMCThreads(), 1_000, 4)
+
+predmodel = fitmodel(missing, prob; callback=betareductioncallback, saveat, psi=10)
+predictions = predict(Random.default_rng(), predmodel, priors_psi10)
+predictionarray = Array(predictions)
+predictionquantiles = zeros(length(data.Cases), 7)
+size(predictionarray, 2) == size(predictionquantiles, 1)
+for i in axes(predictionquantiles, 1)
+    predictionquantiles[i, :] .= quantile(skipmissing(predictionarray[:, i]), [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975])
+end
+
+fig = let 
+    fig = Figure()
+    axs = Axis(fig[1, 1])
+    band!(data.Date, predictionquantiles[:, 1], predictionquantiles[:, 7]; color=(COLOUR_I, 0.3),)
+    band!(data.Date, predictionquantiles[:, 2], predictionquantiles[:, 6]; color=(COLOUR_I, 0.5),)
+    band!(data.Date, predictionquantiles[:, 3], predictionquantiles[:, 5]; color=(COLOUR_I, 0.7),)
+    lines!(data.Date, predictionquantiles[:, 4]; color=COLOUR_I, linewidth=1,)
+    scatter!(data.Date, data.Cases; color=:black, marker=:x, markersize=3,)
+
+    fig
+end
+
+model_psi20 = fitmodel(data.Cases, prob; callback=betareductioncallback, saveat, psi=20)
+priors_psi20 = sample(model_psi20, Prior(), MCMCThreads(), 1_000, 4)
+
+predmodel = fitmodel(missing, prob; callback=betareductioncallback, saveat, psi=20)
+predictions = predict(Random.default_rng(), predmodel, priors_psi20)
+predictionarray = Array(predictions)
+predictionquantiles = zeros(length(data.Cases), 7)
+size(predictionarray, 2) == size(predictionquantiles, 1)
+for i in axes(predictionquantiles, 1)
+    predictionquantiles[i, :] .= quantile(skipmissing(predictionarray[:, i]), [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975])
+end
+
+fig = let 
+    fig = Figure()
+    axs = Axis(fig[1, 1])
+    band!(data.Date, predictionquantiles[:, 1], predictionquantiles[:, 7]; color=(COLOUR_I, 0.3),)
+    band!(data.Date, predictionquantiles[:, 2], predictionquantiles[:, 6]; color=(COLOUR_I, 0.5),)
+    band!(data.Date, predictionquantiles[:, 3], predictionquantiles[:, 5]; color=(COLOUR_I, 0.7),)
+    lines!(data.Date, predictionquantiles[:, 4]; color=COLOUR_I, linewidth=1,)
+    scatter!(data.Date, data.Cases; color=:black, marker=:x, markersize=3,)
+
+    fig
+end
+
+
+
+##
+
+
+
+
+
+
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

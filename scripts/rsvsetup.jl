@@ -10,6 +10,13 @@ agedata = processagedata("respiratory_age.csv", "rsv_age.csv")
 # Data from Oxford Covid-19 Government Response Tracker
 crgtdata = processcrgtvdata("OxCGRT_compact_subnational_v1.csv", "crgt.csv")
 
+# Google mobility data (as a const as it is called by ODE callbacks)
+const MOBILITYDATA = processmobilitydata(
+    "2020_GB_Region_Mobility_Report.csv",
+    "2021_GB_Region_Mobility_Report.csv",
+    "2022_GB_Region_Mobility_Report.csv",
+)
+
 # To avoid splitting outbreaks, count cases from April each year 
 let 
     april1value = MONTHDAYS[4] / 365
@@ -39,14 +46,14 @@ saveat = let
 end
 
 ## Callbacks  
-cbs = let 
-    # When is the infection parameter expected to change?
-    # Find dates (as fractions of year) when Strigency Index goes above then below 50
-    inds = findall(x -> x >= 50, crgtdata.StringencyIndex_Average)
-    reduceday = crgtdata.Date[inds[1]]
-    increaseday = crgtdata.Date[last(inds)]
-    save_positions = ( false, false )
-    resetcb = PresetTimeCallback(reduceday + 1e-9, reducetransmission!; save_positions)
-    rescb = PresetTimeCallback(increaseday, restoretransmission!; save_positions)
-    CallbackSet(resetcb, rescb)
+
+function updatereduction!(integrator)
+    ind = findfirst(x -> x >= integrator.t, MOBILITYDATA.fractiondate)
+    integrator.p = SirnsParameters(integrator.p, MOBILITYDATA.betareduction[ind])
+    return nothing
 end
+
+betareductioncallback = PresetTimeCallback(
+    MOBILITYDATA.fractiondate, updatereduction!; 
+    save_positions=(false, false),  # `fitmodel` assumes saving only at specified `saveat` times
+)

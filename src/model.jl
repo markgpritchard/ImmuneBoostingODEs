@@ -1,10 +1,108 @@
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# The ODE model 
+# Parameters 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# New way of coding sirns! saves approximately 90% of the runtime. Tests added to 
-# check that x1 == cos(2π t - ϕ)
+abstract type AbstractParameters end
+
+struct SirnsParameters{T, U, V, W, X} <: AbstractParameters 
+    β0::T
+    β1::U
+    ϕ::U
+    γ::Float64
+    μ::Float64 
+    ψ::V
+    ω::W
+    βreductionfactor::T
+    βreduction::X
+
+    function SirnsParameters(
+        β0::T, β1::U, ϕ, γ, μ, ψ::V, ω::W, βreductionfactor, βreduction
+    ) where {T, U, V, W}
+        for p in [β0, β1, γ, μ, ψ, ω, βreductionfactor, βreduction]  
+            isnothing(p) && continue
+            p >= 0 || throw(ArgumentError("$p, parameters must not be negative"))
+        end
+        # note, ϕ can be negative
+        β1 <= 1 || throw(ArgumentError("$β1, β1 must not be greater than 1"))
+
+        # type of X has to be able to include values reached after the callback  
+        X = typeof(exp(log(βreduction) * βreductionfactor))
+
+        return new{T, U, V, W, X}(
+            β0, 
+            β1, 
+            convert(U, ϕ), 
+            convert(Float64, γ), 
+            convert(Float64, μ), 
+            ψ, 
+            ω, 
+            convert(T, βreductionfactor),
+            convert(X, βreduction),
+        )
+    end
+
+    function SirnsParameters(
+        p::SirnsParameters{T, U, V, W, X}, βreduction
+    ) where {T, U, V, W, X}
+        # internal function without checks on parameters that have already been checked
+        newbetareduction = exp(log(βreduction) * p.βreductionfactor)
+
+        return new{T, U, V, W, typeof(newbetareduction)}(p.β0, p.β1, p.ϕ, p.γ, p.μ, p.ψ, p.ω, p.βreductionfactor, βreduction)
+    end
+end 
+
+function SirnsParameters( ; 
+    β0=0, β1=nothing, ϕ=nothing, γ=0, μ=0, ψ=0, ω=0, βreductionfactor=1, βreduction=1,
+)
+    return SirnsParameters(β0, β1, ϕ, γ, μ, ψ, ω, βreductionfactor, βreduction)
+end
+
+struct LambdaParms <: AbstractParameters 
+    λ::Float64 
+    γ::Float64 
+    μ::Float64 
+    ψ::Float64 
+    ω::Float64 
+
+    function LambdaParms(λ, γ, μ, ψ, ω)
+        for p in [λ, γ, μ, ψ, ω]
+            p >= 0 || throw(ArgumentError("$p, parameters must not be negative"))
+        end
+        return new(
+            convert(Float64, λ), 
+            convert(Float64, γ), 
+            convert(Float64, μ), 
+            convert(Float64, ψ), 
+            convert(Float64, ω),
+        )
+    end
+end   
+
+function Base.:(==)(a::SirnsParameters, b::SirnsParameters)
+    a.β0 == b.β0 || return false 
+    a.β1 == b.β1 || return false 
+    a.ϕ == b.ϕ || return false 
+    a.γ == b.γ || return false 
+    a.μ == b.μ || return false 
+    a.ψ == b.ψ || return false 
+    a.ω == b.ω || return false 
+    a.βreduction == b.βreduction || return false 
+    return true 
+end
+
+function Base.hash(a::SirnsParameters, h)
+    h = hash(:SirnsParameters, h)
+    for i ∈ [:β0, :β1, :ϕ, :γ, :μ, :ψ, :ω, :βreduction]
+        h = hash(getproperty(a, i), h)
+    end
+    return h
+end
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# The ODE model 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 """ 
     sirns!(du, u, p, t)
@@ -20,13 +118,12 @@ The function `sirns_u0` can be used to produce an appropriate vector for `u`. No
     and a value of cumulative infections.
 """
 function sirns!(du, u, p, t)
-    # Hard-coded to run with 3 resistant subcompartments 
-    β = p.β0 * (1 + p.β1 * u[6])  # β = β0 * (1 + β1 * x1)
-    λ = β * u[2]  # λ = β * I
+    λ = _sirnslambda(p, u)
     return _sirns!(du, u, p, t, λ)
 end 
 
 function _sirns!(du, u, p, t, λ)
+    # Hard-coded to run with 3 resistant subcompartments 
     S, I, R1, R2, R3, x1, x2, cc = u
     
     du[1] = 3 * p.ω * R3 - λ * S + p.μ * (1 - S)  # S
@@ -40,7 +137,7 @@ function _sirns!(du, u, p, t, λ)
     return nothing 
 end
 
-sirns!(du, u, p::LambdaParms, t) = constantlambda_sirns!(du, u, p, t)
+sirns!(du, u, p::LambdaParms, t) = _sirns!(du, u, p, t, p.λ)
 
 """
     constantlambda_sirns!(du, u, p, t)
@@ -56,6 +153,16 @@ See also `sirns!`.
 """
 constantlambda_sirns!(du, u, p, t) = _sirns!(du, u, p, t, p.λ)
 # Hard-coded to run with 3 resistant subcompartments 
+
+_sirnsbeta_0(p) = p.β0 * p.βreduction
+_sirnsbeta_0(p::SirnsParameters{<:Any, <:Any, <:Any, <:Any, Nothing}) = p.β0
+_sirnsbeta(p, u) = _sirnsbeta_0(p) * (1 + p.β1 * u[6])  # β0 * (1 + β1 * x1)
+
+function _sirnsbeta(p::SirnsParameters{<:Any, Nothing, <:Any, <:Any, <:Any}, ::Any)
+    return _sirnsbeta_0(p)
+end
+
+_sirnslambda(p, u) = _sirnsbeta(p, u) * u[2]  # λ = β * I
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -123,16 +230,26 @@ function sirns_u0(S0::S, I0::S; p, equalrs=false, kwargs...) where S
     end 
 end 
 
-function sirns_u0(S0::S, I0, R1, R2, R3; p, t0 = 0) where S
+function sirns_u0(S0::S, I0, R1, R2, R3; p, t0=0) where S
     @assert +(S0, I0, R1, R2, R3) ≈ 1 "+($S0, $I0, $R1, $R2, $R3) = $(+(S0, I0, R1, R2, R3)) != 1"
     @assert min(S0, I0, R1, R2, R3) >= -1e-6 "min($S0, $I0, $R1, $R2, $R3) = $(min(S0, I0, R1, R2, R3)) < 0"
-    u0 = Vector{S}(undef, 8)
-    for (i, v) ∈ enumerate([ S0, I0, R1, R2, R3 ]) u0[i] = v end  
-    u0[6] = cos(2π * t0 - p.ϕ)  # x1 
-    u0[7] = sin(2π * t0 - p.ϕ)  # x2
-    u0[8] = zero(S)  # cumulative cases
+    u0 = [
+        S0, 
+        I0, 
+        R1, 
+        R2, 
+        R3,
+        _initialx1(S, p, t0),
+        _initialx2(S, p, t0),
+        zero(S)  # cumulative cases
+    ]
     return u0
 end 
+
+_initialx1(::Any, p, t0) = cos(2π * t0 - p.ϕ)
+_initialx1(S, ::SirnsParameters{<:Any, Nothing, <:Any, <:Any}, ::Any) = one(S) 
+_initialx2(::Any, p, t0) = sin(2π * t0 - p.ϕ)
+_initialx2(S, ::SirnsParameters{<:Any, Nothing, <:Any, <:Any}, ::Any) = zero(S) 
 
 """ 
     modelcompartments(sol, p)
@@ -197,7 +314,6 @@ Input can be a vector of values, or a Dict containing an element labelled `:cc` 
     `\"cc\"`.
 """
 casespertimeblock(d::Dict{Symbol, <:Any}) = casespertimeblock(d[:cc])
-
 casespertimeblock(d::Dict{<:AbstractString, <:Any}) = casespertimeblock(d["cc"])
 
 function casespertimeblock(cc::Vector{T}) where T
@@ -252,27 +368,4 @@ function pl_modelincidence(config::Dict{Symbol, <:Any})
     @unpack β0, β1, ϕ, γ, μ, ψ, ω, kw = config
     result = modelincidence(SirnsParameters(; β0, β1, ϕ, γ, μ, ψ, ω); kw...)
     return tostringdict(result)
-end
-
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Callback functions 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Default callback functions used to simulate the effect of non-pharmaceutical interventions
-
-function reducetransmission!(integrator) 
-    @unpack β0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0 = integrator.p
-    integrator.p = SirnsParameters(
-        reducedβ0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0
-    )
-end
-
-# Callback function to restore βmean 
-
-function restoretransmission!(integrator) 
-    @unpack β0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0 = integrator.p
-    integrator.p = SirnsParameters(
-        restoredβ0, β1, ϕ, γ, μ, ψ, ω, originalβ0, reducedβ0, restoredβ0
-    )
 end

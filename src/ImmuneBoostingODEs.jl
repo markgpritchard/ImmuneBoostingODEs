@@ -3,20 +3,24 @@ module ImmuneBoostingODEs
 
 import CSV
 import NaNMath
+import Optim
+import Optimization
+import Zygote
 
-using CairoMakie: @L_str, Axis, Axis3, Figure, GridLayout, RGBf, lines!, surface!
+using CairoMakie: @L_str, Axis, Axis3, Figure, GridLayout, Label, RGBf, lines!, surface!
 using DataFrames: DataFrame, insertcols!, leftjoin!, rename!, select!, subset, subset!
+using Dates: day, month, year
 using DifferentialEquations: ODEProblem, Vern9, solve
 using DrWatson: @dict, @ntuple, @unpack
 using DrWatson: datadir, load, ntuple2dict, produce_or_load, tostringdict
 using FFTW: fft
 using LinearAlgebra: eigen
-using Memoization: @memoize
 using Roots: ZeroProblem
+using SciMLBase: successful_retcode
 using StatsBase: mean, quantile, std
-using Turing: @addlogprob!, @model, Beta, Exponential, Normal, Uniform, arraydist
+using Turing: @addlogprob!, @model
+using Turing: Beta, Exponential, LogNormal, Normal, Uniform, arraydist, pdf
 
-include("structs.jl")
 include("consts.jl")
 include("processdata.jl")
 include("equilibria.jl")
@@ -31,7 +35,7 @@ export SirnsParameters, LambdaParms
 ## consts.jl"
 export COLOURVECTOR, COLOUR_I, COLOUR_R, COLOUR_S, MONTHDAYS
 ## processdata.jl
-export printrawdate, processagedata, processcrgtvdata, processrsvdata
+export printrawdate, processagedata, processcrgtvdata, processmobilitydata, processrsvdata
 ## equilibria.jl
 export bifurcationlimits 
 export equil, equileigen, equili, equilplotdata, equilr, equilri, equils 
@@ -48,7 +52,7 @@ export run_sirns
 export sirns!
 export sirns_u0
 ## rsvfitmodel.jl
-export fitmodel
+export fitmodel, optimizesirns
 ## analysedata.jl
 export fittedsimulationquantiles 
 export fittedsimulationsetup
